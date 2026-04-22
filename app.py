@@ -15,8 +15,8 @@ def get_components_from_ai(text):
     api_key = "ZxugNtluJ/d/+0SKz5W45sGjrfvAparfpj5lRoBaTqcomEUfQSVVHTHHIziryjwjFaHipl/jXzhng2BEgyBtQjpqkm8KUV7r2/asrD93Z68PaLQqilUvABGq/O2cgWkrO2uukw=="
     
     prompt = (
-        f"Analyze this meal: '{text}'. Which of these components does it contain: "
-        f"Capsaicin, Fat, Flavonoids, or omega-6? "
+        f"Analyze this meal: '{text}'. Which of these components does it contain: You are to provide a JUST and fair feedback. If there are traces of it, it should be counted as none."
+        f"Capsaicin, Fat, Flavonoids, omega-6 or none? "
         f"Return ONLY a JSON object like this: {{\"components\": [\"Fat\", \"omega-6\"]}}"
     )
 

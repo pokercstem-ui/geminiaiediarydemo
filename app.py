@@ -12,7 +12,7 @@ TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 # --- AI PARSING (OPENROUTER API) ---
 def get_components_from_ai(text):
     # REPLACE WITH YOUR ACTUAL OPENROUTER API KEY
-    api_key = "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"
+    api_key1 = "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"
     
     # OpenRouter requires these headers (they can be placeholders for local apps)
     site_url = "http://localhost:8501"
@@ -25,7 +25,7 @@ def get_components_from_ai(text):
     try:
         # OpenRouter uses the OpenAI-compatible SDK
         client = openai.OpenAI(
-            api_key=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,
+            api_key=api_key1,
             base_url="https://openrouter.ai/api/v1",
             default_headers={
                 "HTTP-Referer": site_url,

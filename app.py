@@ -12,7 +12,7 @@ TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 # --- AI PARSING (LLM7 API) ---
 def get_components_from_ai(text):
     # Get your free token at https://token.llm7.io/
-    api_key = os.getenv("LLM7_API_KEY", "unused")
+    api_key = "ZxugNtluJ/d/+0SKz5W45sGjrfvAparfpj5lRoBaTqcomEUfQSVVHTHHIziryjwjFaHipl/jXzhng2BEgyBtQjpqkm8KUV7r2/asrD93Z68PaLQqilUvABGq/O2cgWkrO2uukw=="
     
     prompt = (
         f"Analyze this meal: '{text}'. Which of these components does it contain: "

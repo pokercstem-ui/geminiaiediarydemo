@@ -12,20 +12,42 @@ TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 # --- AI PARSING (POE SDK) ---
 def get_components_from_ai(text):
     # Replace with your actual Poe API key
-    api_key = "YOUR_POE_API_KEY"
+    api_key = "sk-poe-XrNh8ZHroZJGv0E-iBfS198UEfI2HY-lVO5KDALUihs"
     
     prompt = f'Analyze the meal: "{text}". Which of these components does it contain: Capsaicin, Fat, Flavonoids, omega-6? Return ONLY JSON: {{"components": ["comp1", "comp2"]}}'
 
+    print(f"\n[AI DEBUG] 🚀 Starting API call for: '{text}'")
+    
     try:
         client = openai.OpenAI(api_key=api_key, base_url="https://api.poe.com/v1")
+        
+        # Log that we are sending the request
+        print(f"[AI DEBUG] Sending request to Poe (gemini-2.0-flash-lite)...")
+        
         response = client.responses.create(
             model="gemini-2.0-flash-lite",
             input=prompt
         )
+        
         result_text = response.output_text
+        
+        # Log the raw response from the AI
+        print(f"[AI DEBUG] ✅ Raw Response Received: {result_text.strip()}")
+        
+        # Clean markdown if present
         clean_text = result_text.replace('```json', '').replace('```', '').strip()
-        return json.loads(clean_text).get("components", [])
+        components = json.loads(clean_text).get("components", [])
+        
+        print(f"[AI DEBUG] 📦 Parsed Components: {components}")
+        return components
+
     except Exception as e:
+        # Log the full error to your terminal
+        print(f"[AI DEBUG] ❌ API CALL FAILED")
+        print(f"Error Type: {type(e).__name__}")
+        print(f"Error Details: {str(e)}")
+        
+        # Visual error for the user in the app
         st.sidebar.error(f"AI Error: {e}")
         return []
 

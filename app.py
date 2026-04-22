@@ -65,8 +65,8 @@ with tab1:
             st.rerun()
 
     for l in st.session_state.logs[:5]:
-        st.write(f"**{l['type'].upper()}** - {l.get('content', f'Severity {l.get(severity,0)}')} ({l['timestamp'][:16]})")
-
+        st.write(f"**{l['type'].upper()}** - {l.get('content', f'Severity {l.get('severity', 0)}')} ({l['timestamp'][:16]})")
+        
 with tab2:
     st.header("Pattern Analysis")
     # Analysis logic would iterate through logs and apply calculate_weights here

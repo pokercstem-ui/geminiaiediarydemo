@@ -42,7 +42,7 @@ pip install -r requirements.txt  ```
 ### 3. Configure API Key
 The app requires access to the Poe API to parse meal descriptions. Open app.py in your code editor and locate the api_key variable within the get_components_from_ai function. Replace the placeholder string with your actual Poe API Key:
 ```python
-api_key = "your-poe-api-key-here"```
+api_key = "sk-poe-dsFV7UuN-UFAfLSmL5opCmrzlSz9-q6W_9CT3ccF8WQ"```
 
 ### 4. Launch the Application
 Start the Streamlit server to view the app in your browser:

@@ -23,7 +23,7 @@ def get_components_from_ai(text):
         
         # Corrected method: chat.completions.create
         response = client.chat.completions.create(
-            model="gemini-3-flash",
+            model="assistant",
             messages=[{"role": "user", "content": prompt}]
         )
         

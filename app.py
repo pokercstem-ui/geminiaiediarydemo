@@ -15,9 +15,9 @@ def get_components_from_ai(text):
     api_key = "ZxugNtluJ/d/+0SKz5W45sGjrfvAparfpj5lRoBaTqcomEUfQSVVHTHHIziryjwjFaHipl/jXzhng2BEgyBtQjpqkm8KUV7r2/asrD93Z68PaLQqilUvABGq/O2cgWkrO2uukw=="
     
     prompt = (
-        f"Analyze this meal: '{text}'. Which of these components does it contain: You are to provide a JUST and fair feedback. If there are traces of it, it should be counted as none."
+        f"Analyze this meal: '{text}'. Which of these components does it contain: You are to provide a JUST and fair feedback. Only flag them when it is in large amounts >65%"
         f"Capsaicin, Fat, Flavonoids, omega-6 or none? "
-        f"Return ONLY a JSON object like this: {{\"components\": [\"Fat\", \"omega-6\"]}}"
+        f"Return ONLY a JSON object like this: {{\"components\": [\"Capsaicin\", \"omega-6\"]}}"
     )
 
     print(f"\n[AI DEBUG] 🚀 Starting LLM7 API call for: '{text}'")

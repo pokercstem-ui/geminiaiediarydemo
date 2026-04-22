@@ -12,7 +12,7 @@ TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 # --- AI PARSING (POE SDK) ---
 def get_components_from_ai(text):
     # Replace with your actual Poe API key
-    api_key = "YOUR_POE_API_KEY"
+    api_key = "sk-poe-dsFV7UuN-UFAfLSmL5opCmrzlSz9-q6W_9CT3ccF8WQ"
     
     prompt = f'Analyze the meal: "{text}". Which of these components does it contain: Capsaicin, Fat, Flavonoids, omega-6? Return ONLY JSON: {{"components": ["comp1", "comp2"]}}'
 

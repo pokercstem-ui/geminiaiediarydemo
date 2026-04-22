@@ -9,28 +9,40 @@ import openai
 DATA_FILE = "logs.json"
 TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 
-# --- AI PARSING (OPENAI SDK FOR POE) ---
+# --- AI PARSING (OPENROUTER API) ---
 def get_components_from_ai(text):
-    # REPLACE WITH YOUR ACTUAL POE API KEY
-    api_key = "sk-poe-XrNh8ZHroZJGv0E-iBfS198UEfI2HY-lVO5KDALUihs"
+    # REPLACE WITH YOUR ACTUAL OPENROUTER API KEY
+    api_key = "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"
+    
+    # OpenRouter requires these headers (they can be placeholders for local apps)
+    site_url = "http://localhost:8501"
+    site_name = "GutPattern"
     
     prompt = f'Analyze the meal: "{text}". Which of these components does it contain: Capsaicin, Fat, Flavonoids, omega-6? Return ONLY JSON: {{"components": ["comp1", "comp2"]}}'
 
-    print(f"\n[AI DEBUG] 🚀 Starting API call for: '{text}'")
+    print(f"\n[AI DEBUG] 🚀 Starting OpenRouter API call for: '{text}'")
     
     try:
-        client = openai.OpenAI(api_key=api_key, base_url="https://api.poe.com/v1")
+        # OpenRouter uses the OpenAI-compatible SDK
+        client = openai.OpenAI(
+            api_key=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,
+            base_url="https://openrouter.ai/api/v1",
+            default_headers={
+                "HTTP-Referer": site_url,
+                "X-Title": site_name,
+            }
+        )
         
-        # Corrected method: chat.completions.create
+        # You can choose models like 'google/gemini-2.0-flash-001' or 'openai/gpt-4o-mini'
         response = client.chat.completions.create(
-            model="gemini-2.5-flash",
+            model="google/gemini-2.0-flash-001",
             messages=[{"role": "user", "content": prompt}]
         )
         
-        # Corrected response field: choices[0].message.content
         result_text = response.choices[0].message.content
         print(f"[AI DEBUG] ✅ Raw Response Received: {result_text.strip()}")
         
+        # Clean markdown formatting if the AI includes it
         clean_text = result_text.replace('```json', '').replace('```', '').strip()
         components = json.loads(clean_text).get("components", [])
         
@@ -38,7 +50,7 @@ def get_components_from_ai(text):
         return components
 
     except Exception as e:
-        print(f"[AI DEBUG] ❌ API CALL FAILED: {str(e)}")
+        print(f"[AI DEBUG] ❌ OPENROUTER API CALL FAILED: {str(e)}")
         st.sidebar.error(f"AI Error: {e}")
         return []
 
@@ -164,4 +176,5 @@ with tab4:
                 elif max_risk > 40:
                     st.warning(f"### ⚠️ Caution ({max_risk}/100)\nThis meal has a moderate risk of causing a reaction.")
                 else:
+                    st.success(f"### ✅ Likely Safe ({max_risk}/100)\nBased on your history, this meal appears to be low risk.")
                     st.success(f"### ✅ Likely Safe ({max_risk}/100)\nBased on your history, this meal appears to be low risk.")

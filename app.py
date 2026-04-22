@@ -22,10 +22,10 @@ def get_components_from_ai(text):
         client = openai.OpenAI(api_key=api_key, base_url="https://api.poe.com/v1")
         
         # Log that we are sending the request
-        print(f"[AI DEBUG] Sending request to Poe (gemini-2.0-flash-lite)...")
+        print(f"[AI DEBUG] Sending request to Poe (gemini-3-flash)...")
         
         response = client.responses.create(
-            model="gemini-2.0-flash-lite",
+            model="gemini-3-flash",
             input=prompt
         )
         

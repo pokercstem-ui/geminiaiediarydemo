@@ -12,7 +12,7 @@ TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 # --- AI PARSING (POE SDK) ---
 def get_components_from_ai(text):
     # Replace with your actual Poe API key
-    api_key = "sk-poe-dsFV7UuN-UFAfLSmL5opCmrzlSz9-q6W_9CT3ccF8WQ"
+    api_key = "YOUR_POE_API_KEY"
     
     prompt = f'Analyze the meal: "{text}". Which of these components does it contain: Capsaicin, Fat, Flavonoids, omega-6? Return ONLY JSON: {{"components": ["comp1", "comp2"]}}'
 
@@ -41,33 +41,73 @@ st.set_page_config(page_title="GutPattern", page_icon="🧩")
 st.title("🧩 GutPattern")
 st.caption("Bi-Modal Dietary Trigger Tracker")
 
+# Load Data
 if 'logs' not in st.session_state:
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f: st.session_state.logs = json.load(f)
-    else: st.session_state.logs = []
+        with open(DATA_FILE, "r") as f: 
+            st.session_state.logs = json.load(f)
+    else: 
+        st.session_state.logs = []
 
-tab1, tab2 = st.tabs(["📖 Journal", "📊 Analysis"])
+# Navigation Tabs
+tab1, tab2, tab3 = st.tabs(["📝 Input", "📋 History", "📊 Analysis"])
 
+# --- TAB 1: INPUT ---
 with tab1:
-    with st.form("meal_form"):
-        meal_txt = st.text_input("What did you eat?")
-        if st.form_submit_button("Log Meal") and meal_txt:
-            comps = get_components_from_ai(meal_txt)
-            st.session_state.logs.insert(0, {"type": "meal", "content": meal_txt, "components": comps, "timestamp": datetime.now().isoformat()})
-            with open(DATA_FILE, "w") as f: json.dump(st.session_state.logs, f)
-            st.rerun()
+    st.header("Log Activity")
+    with st.expander("🍎 Log a Meal", expanded=True):
+        with st.form("meal_form", clear_on_submit=True):
+            meal_txt = st.text_input("What did you eat?")
+            if st.form_submit_button("Save Meal") and meal_txt:
+                with st.spinner("AI is analyzing ingredients..."):
+                    comps = get_components_from_ai(meal_txt)
+                    st.session_state.logs.insert(0, {
+                        "type": "meal", 
+                        "content": meal_txt, 
+                        "components": comps, 
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    with open(DATA_FILE, "w") as f: 
+                        json.dump(st.session_state.logs, f)
+                    st.success("Meal logged!")
+                    st.rerun()
 
-    with st.form("flare_form"):
-        sev = st.slider("Flare-up Severity", 1, 10, 5)
-        if st.form_submit_button("Log Flare-up"):
-            st.session_state.logs.insert(0, {"type": "flareup", "severity": sev, "timestamp": datetime.now().isoformat()})
-            with open(DATA_FILE, "w") as f: json.dump(st.session_state.logs, f)
-            st.rerun()
+    with st.expander("🚨 Log a Flare-up"):
+        with st.form("flare_form", clear_on_submit=True):
+            sev = st.slider("Severity (1-10)", 1, 10, 5)
+            if st.form_submit_button("Save Flare-up"):
+                st.session_state.logs.insert(0, {
+                    "type": "flareup", 
+                    "severity": sev, 
+                    "timestamp": datetime.now().isoformat()
+                })
+                with open(DATA_FILE, "w") as f: 
+                    json.dump(st.session_state.logs, f)
+                st.success("Symptom logged!")
+                st.rerun()
 
-    for l in st.session_state.logs[:5]:
-        st.write(f"**{l['type'].upper()}** - {l.get('content', f'Severity {l.get('severity', 0)}')} ({l['timestamp'][:16]})")
-        
+# --- TAB 2: HISTORY (ALL LOGS) ---
 with tab2:
+    st.header("Complete History")
+    if not st.session_state.logs:
+        st.write("No logs found yet. Start by logging a meal!")
+    else:
+        if st.button("🗑️ Clear All History"):
+            st.session_state.logs = []
+            if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+            st.rerun()
+
+        for l in st.session_state.logs:
+            # Format time for readability
+            time_str = datetime.fromisoformat(l['timestamp']).strftime("%b %d, %I:%M %p")
+            
+            if l['type'] == 'meal':
+                st.info(f"🍴 **MEAL**: {l.get('content')}  \n**Components**: {', '.join(l.get('components', [])) or 'None detected'}  \n*{time_str}*")
+            else:
+                st.error(f"🚨 **FLARE-UP**: Severity {l.get('severity')}  \n*{time_str}*")
+
+# --- TAB 3: ANALYSIS ---
+with tab3:
     st.header("Pattern Analysis")
-    # Analysis logic would iterate through logs and apply calculate_weights here
-    st.info("Log more data to see mathematical correlations.")
+    st.info("Log at least 3-5 days of data to see mathematical correlations.")
+    # Mathematical analysis visualization would go here

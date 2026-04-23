@@ -2,196 +2,305 @@ import streamlit as st
 import math
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import openai
 
-# --- CONFIGURATION ---
+# --- PAGE SETUP ---
+st.set_page_config(
+    page_title="GutPattern",
+    page_icon="🧩",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+st.markdown(
+    """
+    <style>
+    .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
+    .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
+    .card {
+        padding: 1rem 1.1rem;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+        border: 1px solid #dbeafe;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+    }
+    .section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-top: 0.25rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 DATA_FILE = "logs.json"
 TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 
-# --- AI PARSING (LLM7 API) ---
+SYMPTOM_OPTIONS = [
+    "Itching", "Redness", "Dryness", "Cracking", "Oozing",
+    "Burning", "Swelling", "Pain", "Sleep disturbance"
+]
+
+AFFECTED_AREA_OPTIONS = [
+    "Face", "Eyelids", "Neck", "Chest", "Back", "Arms", "Elbows",
+    "Hands", "Fingers", "Stomach", "Legs", "Knees", "Feet", "Other"
+]
+
+TREATMENT_OPTIONS = [
+    "Moisturizer", "Topical steroid", "Topical calcineurin inhibitor",
+    "Antihistamine", "Wet wrap", "Cool compress", "None"
+]
+
+# --- SECRETS ---
+API_KEY = st.secrets.get("LLM7_API_KEY", "")
+if not API_KEY:
+    st.warning("Add `LLM7_API_KEY` to `.streamlit/secrets.toml`.")
+
+# --- AI PARSING ---
 def get_components_from_ai(text):
-    # Get your free token at https://token.llm7.io/
-    api_key = "ZxugNtluJ/d/+0SKz5W45sGjrfvAparfpj5lRoBaTqcomEUfQSVVHTHHIziryjwjFaHipl/jXzhng2BEgyBtQjpqkm8KUV7r2/asrD93Z68PaLQqilUvABGq/O2cgWkrO2uukw=="
-    
+    if not API_KEY:
+        return []
+
     prompt = (
-        f"Analyze this meal: '{text}'. Which of these components does it contain: You are to provide a JUST and fair feedback. Only flag them when it is in large amounts >65%"
-        f"Capsaicin, Fat, Flavonoids, omega-6 or none? "
+        f"Analyze this meal: '{text}'. Which of these components does it contain: "
+        f"Capsaicin, Fat, Flavonoids, omega-6, or none? Only flag them when they are in large amounts. "
         f"Return ONLY a JSON object like this: {{\"components\": [\"Capsaicin\", \"omega-6\"]}}"
     )
 
-    print(f"\n[AI DEBUG] 🚀 Starting LLM7 API call for: '{text}'")
-    
     try:
-        # LLM7 is OpenAI-compatible
         client = openai.OpenAI(
             base_url="https://api.llm7.io/v1",
-            api_key=api_key,
+            api_key=API_KEY,
         )
-        
+
         response = client.chat.completions.create(
             model="default",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
+            messages=[{"role": "user", "content": prompt}]
         )
-        
+
         result_text = response.choices[0].message.content
-        print(f"[AI DEBUG] ✅ Raw Response Received: {result_text.strip()}")
-        
-        # Clean markdown formatting if present
-        clean_text = result_text.replace('```json', '').replace('```', '').strip()
+        clean_text = result_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
         components = data.get("components", [])
-        
-        # Filter to ensure only valid tracked components are returned
-        valid_comps = [c for c in components if c in TRACKED_COMPONENTS]
-        
-        print(f"[AI DEBUG] 📦 Parsed Components: {valid_comps}")
-        return valid_comps
+        return [c for c in components if c in TRACKED_COMPONENTS]
 
-    except Exception as e:
-        print(f"[AI DEBUG] ❌ LLM7 API CALL FAILED: {str(e)}")
-        st.sidebar.error(f"AI Error: Could not analyze meal components.")
+    except Exception:
+        st.sidebar.error("AI Error: Could not analyze meal components.")
         return []
 
-# --- MATH LOGIC ---
+# --- ANALYSIS LOGIC ---
 def calculate_weights(delta_hours):
-    if delta_hours < 0: return 0, 0, 0
-    # Immediate weight (Exponential)
+    if delta_hours < 0:
+        return 0, 0, 0
     w_fast = 1.0 * math.exp(-0.5 * delta_hours)
-    # Delayed weight (Gaussian centered at 36h)
-    w_slow = 0.8 * math.exp(-((delta_hours - 36)**2) / (2 * 6**2))
+    w_slow = 0.8 * math.exp(-((delta_hours - 36) ** 2) / (2 * 6 ** 2))
     return w_fast + w_slow, w_fast, w_slow
+
+def flare_feature_score(flare):
+    severity = flare.get("severity", 5)
+    itch = flare.get("itch", 0)
+    sleep = flare.get("sleep_disturbance", 0)
+    area_count = len(flare.get("affected_areas", []))
+    symptom_count = len(flare.get("symptoms", []))
+
+    return (
+        severity * 1.0 +
+        itch * 1.2 +
+        sleep * 1.0 +
+        min(area_count, 6) * 0.8 +
+        min(symptom_count, 6) * 0.4
+    )
 
 def run_analysis(logs):
     stats = {c: 0.0 for c in TRACKED_COMPONENTS}
     counts = {c: 0 for c in TRACKED_COMPONENTS}
-    
-    meals = [l for l in logs if l['type'] == 'meal']
-    flares = [l for l in logs if l['type'] == 'flareup']
-    
+
+    meals = [l for l in logs if l["type"] == "meal"]
+    flares = [l for l in logs if l["type"] == "flareup"]
+
     for meal in meals:
-        m_time = datetime.fromisoformat(meal['timestamp'])
-        for comp in meal.get('components', []):
+        m_time = datetime.fromisoformat(meal["timestamp"])
+        for comp in meal.get("components", []):
             if comp in stats:
                 counts[comp] += 1
                 for f in flares:
-                    f_time = datetime.fromisoformat(f['timestamp'])
+                    f_time = datetime.fromisoformat(f["timestamp"])
                     delta = (f_time - m_time).total_seconds() / 3600.0
                     if 0 <= delta <= 72:
                         weight, _, _ = calculate_weights(delta)
-                        stats[comp] += (f['severity'] * weight)
-    
+                        stats[comp] += flare_feature_score(f) * weight
+
     results = []
     for c in TRACKED_COMPONENTS:
         if counts[c] > 0:
-            score = min(int((stats[c] / counts[c]) * 10), 100)
+            score = min(int((stats[c] / counts[c]) * 4), 100)
             results.append({"component": c, "score": score})
-    return sorted(results, key=lambda x: x['score'], reverse=True)
 
-# --- STREAMLIT UI ---
-st.set_page_config(page_title="GutPattern", page_icon="🧩")
-st.title("🧩 GutPattern")
+    return sorted(results, key=lambda x: x["score"], reverse=True)
 
-if 'logs' not in st.session_state:
+# --- LOAD DATA ---
+if "logs" not in st.session_state:
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f: st.session_state.logs = json.load(f)
-    else: st.session_state.logs = []
+        with open(DATA_FILE, "r") as f:
+            st.session_state.logs = json.load(f)
+    else:
+        st.session_state.logs = []
+
+logs = st.session_state.logs
+meal_count = sum(1 for l in logs if l["type"] == "meal")
+flare_count = sum(1 for l in logs if l["type"] == "flareup")
+latest_flare = next((l for l in logs if l["type"] == "flareup"), None)
+
+# --- HEADER ---
+st.markdown('<div class="big-title">🧩 GutPattern</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="subtitle">Track meals, eczema flares, and trigger patterns with a friendlier, more visual dashboard.</div>',
+    unsafe_allow_html=True
+)
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.header("📌 App Status")
+    st.metric("Meals logged", meal_count)
+    st.metric("Flare-ups logged", flare_count)
+    st.caption("Tip: log symptoms, affected areas, and treatment each time.")
+    if API_KEY:
+        st.success("AI key loaded from secrets.")
+    else:
+        st.error("Missing AI key in secrets.")
+
+# --- TOP METRICS ---
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown(f'<div class="card"><div class="section-title">🍴 Meals</div><h2>{meal_count}</h2><p>Food entries recorded.</p></div>', unsafe_allow_html=True)
+with c2:
+    st.markdown(f'<div class="card"><div class="section-title">🚨 Flare-ups</div><h2>{flare_count}</h2><p>Symptom events recorded.</p></div>', unsafe_allow_html=True)
+with c3:
+    if latest_flare:
+        sev = latest_flare.get("severity", 0)
+        st.markdown(f'<div class="card"><div class="section-title">🔥 Latest flare</div><h2>{sev}/10</h2><p>Most recent severity.</p></div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="card"><div class="section-title">🔥 Latest flare</div><h2>—</h2><p>No flare logged yet.</p></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 
 with tab1:
-    st.header("Log Activity")
-    with st.expander("🍎 Log a Meal", expanded=True):
-        with st.form("meal_form", clear_on_submit=True):
-            meal_txt = st.text_input("What did you eat?", placeholder="e.g. French fries and spicy dipping sauce")
-            if st.form_submit_button("Save Meal") and meal_txt:
-                with st.spinner("AI is analyzing components..."):
-                    comps = get_components_from_ai(meal_txt)
+    st.subheader("Log Activity")
+    left, right = st.columns(2)
+
+    with left:
+        with st.container(border=True):
+            st.markdown("### 🍎 Log a Meal")
+            with st.form("meal_form", clear_on_submit=True):
+                meal_txt = st.text_input("What did you eat?", placeholder="e.g. French fries and spicy dipping sauce")
+                save_meal = st.form_submit_button("Save Meal")
+                if save_meal and meal_txt:
+                    with st.spinner("AI is analyzing components..."):
+                        comps = get_components_from_ai(meal_txt)
+                        st.session_state.logs.insert(0, {
+                            "type": "meal",
+                            "content": meal_txt,
+                            "components": comps,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        with open(DATA_FILE, "w") as f:
+                            json.dump(st.session_state.logs, f)
+                        st.success("Meal logged successfully!")
+                        st.rerun()
+
+    with right:
+        with st.container(border=True):
+            st.markdown("### 🚨 Log a Flare-up")
+            with st.form("flare_form", clear_on_submit=True):
+                sev = st.slider("Overall severity", 1, 10, 5)
+                itch = st.slider("Itch severity", 0, 10, 5)
+                sleep_disturbance = st.slider("Sleep disturbance", 0, 10, 0)
+                symptoms = st.multiselect("What symptoms did you have?", SYMPTOM_OPTIONS)
+                affected_areas = st.multiselect("What areas were affected?", AFFECTED_AREA_OPTIONS)
+                other_area = st.text_input("Other affected area (optional)")
+                treatment_used = st.multiselect("What did you use?", TREATMENT_OPTIONS)
+                notes = st.text_area("Extra notes", placeholder="e.g. worse after sweating, new soap, stressed at work")
+                save_flare = st.form_submit_button("Save Flare-up")
+
+                if save_flare:
+                    areas = affected_areas + ([other_area] if other_area.strip() else [])
                     st.session_state.logs.insert(0, {
-                        "type": "meal", 
-                        "content": meal_txt, 
-                        "components": comps, 
+                        "type": "flareup",
+                        "severity": sev,
+                        "itch": itch,
+                        "sleep_disturbance": sleep_disturbance,
+                        "symptoms": symptoms,
+                        "affected_areas": areas,
+                        "treatment_used": treatment_used,
+                        "notes": notes,
                         "timestamp": datetime.now().isoformat()
                     })
-                    with open(DATA_FILE, "w") as f: json.dump(st.session_state.logs, f)
-                    st.success("Meal logged successfully!")
+                    with open(DATA_FILE, "w") as f:
+                        json.dump(st.session_state.logs, f)
+                    st.success("Flare-up logged.")
                     st.rerun()
 
-    with st.expander("🚨 Log a Flare-up"):
-        with st.form("flare_form", clear_on_submit=True):
-            sev = st.slider("How severe is the reaction?", 1, 10, 5)
-            symptoms = st.text_area(
-                "What symptoms did you have?",
-                placeholder="e.g. bloating, cramps, diarrhea, nausea"
-            )
-            affected_areas = st.multiselect(
-                "What areas were affected?",
-                ["Stomach", "Upper abdomen", "Lower abdomen", "Chest", "Skin", "Throat", "Head", "Other"]
-            )
-            other_area = st.text_input("Other affected area (optional)")
-            if st.form_submit_button("Save Flare-up"):
-                st.session_state.logs.insert(0, {
-                    "type": "flareup",
-                    "severity": sev,
-                    "symptoms": symptoms,
-                    "affected_areas": affected_areas + ([other_area] if other_area.strip() else []),
-                    "timestamp": datetime.now().isoformat()
-                })
-                with open(DATA_FILE, "w") as f:
-                    json.dump(st.session_state.logs, f)
-                st.success("Symptom logged.")
-                st.rerun()
-
 with tab2:
-    st.header("History")
+    st.subheader("History")
     if st.button("🗑️ Clear All History"):
         st.session_state.logs = []
-        if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
         st.rerun()
-    
-    for l in st.session_state.logs:
-        t = datetime.fromisoformat(l['timestamp']).strftime("%b %d, %H:%M")
-        if l['type'] == 'meal':
-            comp_list = l.get('components', [])
+
+    for l in logs:
+        t = datetime.fromisoformat(l["timestamp"]).strftime("%b %d, %H:%M")
+        if l["type"] == "meal":
+            comp_list = l.get("components", [])
             labels = " ".join([f"`{c}`" for c in comp_list]) if comp_list else "*No tracked components*"
-            st.info(f"🍴 **{l['content']}** \n{labels}  \n*{t}*")
+            st.info(f"🍴 **{l['content']}**  \n{labels}  \n*{t}*")
         else:
-            symptoms = l.get("symptoms", "")
-            areas = l.get("affected_areas", [])
-            area_text = ", ".join(areas) if areas else "Not specified"
+            symptoms = ", ".join(l.get("symptoms", [])) or "Not specified"
+            areas = ", ".join(l.get("affected_areas", [])) or "Not specified"
+            treatments = ", ".join(l.get("treatment_used", [])) or "None"
+            notes = l.get("notes", "").strip() or "None"
+
             st.error(
-                f"🚨 **Flare-up**: Severity {l['severity']}  \n"
-                f"**Symptoms:** {symptoms if symptoms else 'Not specified'}  \n"
-                f"**Affected areas:** {area_text}  \n"
+                f"🚨 **Flare-up**: Severity {l.get('severity', 0)}  \n"
+                f"**Itch:** {l.get('itch', 0)}/10  \n"
+                f"**Sleep disturbance:** {l.get('sleep_disturbance', 0)}/10  \n"
+                f"**Symptoms:** {symptoms}  \n"
+                f"**Affected areas:** {areas}  \n"
+                f"**Treatment used:** {treatments}  \n"
+                f"**Notes:** {notes}  \n"
                 f"*{t}*"
             )
 
 with tab3:
-    st.header("Analysis")
-    scores = run_analysis(st.session_state.logs)
+    st.subheader("Analysis")
+    scores = run_analysis(logs)
+
     if not scores:
         st.write("Keep logging! Patterns appear once you have meals and flare-ups recorded.")
     else:
         for s in scores:
-            st.write(f"**{s['component']}**")
-            st.progress(s['score'] / 100)
-            st.caption(f"Correlation Score: {s['score']}/100")
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**{s['component']}**")
+                st.progress(s["score"] / 100)
+            with col2:
+                st.metric("Score", f"{s['score']}/100")
 
 with tab4:
-    st.header("Risk Forecast")
+    st.subheader("Risk Forecast")
     st.write("Predict potential triggers before you eat.")
-    
+
     with st.form("predict_form"):
         predict_txt = st.text_input("Enter a meal to check:")
         check_btn = st.form_submit_button("Check Pattern Risk")
-        
+
     if check_btn and predict_txt:
         with st.spinner("Checking your history..."):
             comps = get_components_from_ai(predict_txt)
-            analysis_scores = {s['component']: s['score'] for s in run_analysis(st.session_state.logs)}
-            
+            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
+
             if not comps:
                 st.warning("No tracked components found in that meal.")
             else:
@@ -200,11 +309,11 @@ with tab4:
                     score = analysis_scores.get(c, 0)
                     max_risk = max(max_risk, score)
                     st.write(f"Found `{c}`: Risk Score {score}/100")
-                
+
                 st.divider()
                 if max_risk > 70:
-                    st.error(f"### High Risk Detected\nYour history suggests this meal might lead to a strong reaction.")
+                    st.error("### High Risk Detected\nYour history suggests this meal might lead to a strong reaction.")
                 elif max_risk > 40:
-                    st.warning(f"### Caution\nThere is a moderate historical correlation with flare-ups.")
+                    st.warning("### Caution\nThere is a moderate historical correlation with flare-ups.")
                 else:
-                    st.success(f"### Likely Low Risk\nNo strong patterns found for these ingredients.")
+                    st.success("### Likely Low Risk\nNo strong patterns found for these ingredients.")

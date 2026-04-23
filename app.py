@@ -122,13 +122,25 @@ with tab1:
     with st.expander("🚨 Log a Flare-up"):
         with st.form("flare_form", clear_on_submit=True):
             sev = st.slider("How severe is the reaction?", 1, 10, 5)
+            symptoms = st.text_area(
+                "What symptoms did you have?",
+                placeholder="e.g. bloating, cramps, diarrhea, nausea"
+            )
+            affected_areas = st.multiselect(
+                "What areas were affected?",
+                ["Stomach", "Upper abdomen", "Lower abdomen", "Chest", "Skin", "Throat", "Head", "Other"]
+            )
+            other_area = st.text_input("Other affected area (optional)")
             if st.form_submit_button("Save Flare-up"):
                 st.session_state.logs.insert(0, {
-                    "type": "flareup", 
-                    "severity": sev, 
+                    "type": "flareup",
+                    "severity": sev,
+                    "symptoms": symptoms,
+                    "affected_areas": affected_areas + ([other_area] if other_area.strip() else []),
                     "timestamp": datetime.now().isoformat()
                 })
-                with open(DATA_FILE, "w") as f: json.dump(st.session_state.logs, f)
+                with open(DATA_FILE, "w") as f:
+                    json.dump(st.session_state.logs, f)
                 st.success("Symptom logged.")
                 st.rerun()
 
@@ -146,7 +158,15 @@ with tab2:
             labels = " ".join([f"`{c}`" for c in comp_list]) if comp_list else "*No tracked components*"
             st.info(f"🍴 **{l['content']}** \n{labels}  \n*{t}*")
         else:
-            st.error(f"🚨 **Flare-up**: Severity {l['severity']}  \n*{t}*")
+            symptoms = l.get("symptoms", "")
+            areas = l.get("affected_areas", [])
+            area_text = ", ".join(areas) if areas else "Not specified"
+            st.error(
+                f"🚨 **Flare-up**: Severity {l['severity']}  \n"
+                f"**Symptoms:** {symptoms if symptoms else 'Not specified'}  \n"
+                f"**Affected areas:** {area_text}  \n"
+                f"*{t}*"
+            )
 
 with tab3:
     st.header("Analysis")

@@ -6,12 +6,8 @@ from datetime import datetime
 import openai
 
 # --- PAGE SETUP ---
-st.set_page_config(
-    page_title="GutPattern",
-    page_icon="🧩",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.markdown("# 🧩 GutPattern")
+st.caption("Track meals, eczema flares, and trigger patterns in one clean place.")
 
 st.markdown(
     """
@@ -19,6 +15,46 @@ st.markdown(
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
     
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <style>
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0.5rem;
+        padding-top: 0.25rem;
+        border-bottom: 1px solid rgba(49, 51, 63, 0.12);
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background: #f6f8fb;
+        border: 1px solid #dbe3ee;
+        border-bottom: none;
+        padding: 0.45rem 0.9rem;
+        border-radius: 999px 999px 0 0;
+        font-weight: 600;
+        color: #4a5568;
+        transition: all 0.2s ease;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: white;
+        color: #2563eb;
+        border-color: #93c5fd;
+        box-shadow: 0 -2px 10px rgba(37, 99, 235, 0.08);
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        background: #eef4ff;
+        color: #1d4ed8;
+    }
+
+    .stTabs [data-baseweb="tab-panel"] {
+        padding-top: 1rem;
+    }
     </style>
     """,
     unsafe_allow_html=True

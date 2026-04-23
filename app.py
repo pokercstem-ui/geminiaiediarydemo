@@ -18,18 +18,7 @@ st.markdown(
     <style>
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
-    .card {
-        padding: 1rem 1.1rem;
-        border-radius: 16px;
-        background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
-        border: 1px solid #dbeafe;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.04);
-    }
-    .section-title {
-        font-size: 1.15rem;
-        font-weight: 700;
-        margin-top: 0.25rem;
-    }
+    
     </style>
     """,
     unsafe_allow_html=True
@@ -161,19 +150,6 @@ st.markdown(
 )
 
 # --- SIDEBAR ---
-
-# --- TOP METRICS ---
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown(f'<div class="card"><div class="section-title">🍴 Meals</div><h2>{meal_count}</h2><p>Food entries recorded.</p></div>', unsafe_allow_html=True)
-with c2:
-    st.markdown(f'<div class="card"><div class="section-title">🚨 Flare-ups</div><h2>{flare_count}</h2><p>Symptom events recorded.</p></div>', unsafe_allow_html=True)
-with c3:
-    if latest_flare:
-        sev = latest_flare.get("severity", 0)
-        st.markdown(f'<div class="card"><div class="section-title">🔥 Latest flare</div><h2>{sev}/10</h2><p>Most recent severity.</p></div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="card"><div class="section-title">🔥 Latest flare</div><h2>—</h2><p>No flare logged yet.</p></div>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 

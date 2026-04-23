@@ -161,15 +161,6 @@ st.markdown(
 )
 
 # --- SIDEBAR ---
-with st.sidebar:
-    st.header("📌 App Status")
-    st.metric("Meals logged", meal_count)
-    st.metric("Flare-ups logged", flare_count)
-    st.caption("Tip: log symptoms, affected areas, and treatment each time.")
-    if API_KEY:
-        st.success("AI key loaded from secrets.")
-    else:
-        st.error("Missing AI key in secrets.")
 
 # --- TOP METRICS ---
 c1, c2, c3 = st.columns(3)
@@ -241,7 +232,6 @@ with tab1:
                         json.dump(st.session_state.logs, f)
                     st.success("Flare-up logged.")
                     st.rerun()
-
 with tab2:
     st.subheader("History")
     if st.button("🗑️ Clear All History"):

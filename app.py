@@ -140,7 +140,6 @@ flare_count = sum(1 for l in logs if l["type"] == "flareup")
 latest_flare = next((l for l in logs if l["type"] == "flareup"), None)
 
 # --- HEADER ---
-st.markdown('<div class="big-title">🧩 GutPattern</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="subtitle">Track meals, eczema flares, and trigger patterns with a friendlier, more visual dashboard.</div>',
     unsafe_allow_html=True

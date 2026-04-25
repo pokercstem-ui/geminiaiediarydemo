@@ -38,7 +38,6 @@ if not API_KEY:
     st.warning("Add `LLM7_API_KEY` to `.streamlit/secrets.toml`.")
 
 # --- AI PARSING ---
-# --- AI PARSING ---
 def analyze_meal_with_ai(text):
     if not API_KEY:
         st.sidebar.error("API Key is missing!")
@@ -64,11 +63,8 @@ def analyze_meal_with_ai(text):
         )
 
         result_text = response.choices[0].message.content
-        print(f"RAW AI RESPONSE:\n{result_text}\n") # <-- Prints what the AI actually said
-
         clean_text = result_text.replace("```json", "").replace("```", "").strip()
         
-        # Sometimes AI adds text before the JSON, let's try to extract just the curly braces
         if clean_text.find('{') != -1:
             clean_text = clean_text[clean_text.find('{'):clean_text.rfind('}')+1]
 
@@ -80,14 +76,12 @@ def analyze_meal_with_ai(text):
         }
 
     except Exception as e:
-        # This will now print the exact error to your terminal!
         print(f"AI ERROR DETAILS: {str(e)}") 
         st.sidebar.error(f"AI Error: {str(e)}")
         return {"ingredients": [], "chemical_composition": {}}
 
 # --- HELPER LOGIC ---
 def extract_chemicals_from_meal(meal):
-    """Extracts a flat, unique list of formatted chemicals from a meal's composition dict."""
     chemicals = set()
     chem_comp = meal.get("chemical_composition", {})
     for chem_list in chem_comp.values():
@@ -95,7 +89,6 @@ def extract_chemicals_from_meal(meal):
             for c in chem_list:
                 chemicals.add(c.strip().title())
         elif isinstance(chem_list, str):
-            # Fallback just in case the AI returns a comma-separated string
             for c in chem_list.split(','):
                 chemicals.add(c.strip().title())
     return list(chemicals)
@@ -126,7 +119,6 @@ def run_analysis(logs):
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
 
-    # Calculate dynamic scores for all detected chemicals
     for meal in meals:
         m_time = datetime.fromisoformat(meal["timestamp"])
         chemicals = extract_chemicals_from_meal(meal)
@@ -149,7 +141,7 @@ def run_analysis(logs):
     for c in stats:
         if counts[c] > 0:
             score = min(int((stats[c] / counts[c]) * 4), 100)
-            if score > 0: # Only return chemicals that have some correlation
+            if score > 0: 
                 results.append({"component": c, "score": score, "occurrences": counts[c]})
 
     return sorted(results, key=lambda x: x["score"], reverse=True)
@@ -237,16 +229,12 @@ with tab2:
             ingredients = l.get("ingredients", [])
             chem_comp = l.get("chemical_composition", {})
             
-            # Extract flat chemicals just for the display labels
-            all_chems = extract_chemicals_from_meal(l)
-            labels = " ".join([f"`{c}`" for c in sorted(all_chems)]) if all_chems else "*No chemicals detected*"
-            
-            st.info(f"🍴 **{l['content']}** \n{labels}  \n*{t}*")
+            # Removed the raw labels from the info box for a cleaner look
+            st.info(f"🍴 **{l['content']}** \n*{t}*")
             
             if ingredients or chem_comp:
                 with st.expander("View Breakdown"):
                     for ing in ingredients:
-                        # Grab the list of chemicals and format as a string
                         chems = chem_comp.get(ing, [])
                         if isinstance(chems, list):
                             composition = ", ".join(chems)
@@ -292,10 +280,7 @@ with tab4:
     if check_btn and predict_txt:
         with st.spinner("Checking your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
-            
-            # Use the helper function to flatten the predicted meal's dict into a list of chemicals
             comps = extract_chemicals_from_meal(analysis_data)
-            
             analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
 
             if not comps:

@@ -46,9 +46,10 @@ def analyze_meal_with_ai(text):
     prompt = (
         f"Analyze this meal: '{text}'. Provide the following:\n"
         f"1. 'ingredients': A list of the main base ingredients.\n"
-        f"2. 'chemical_composition': A dictionary where keys are the ingredients, and values are LISTS of their main chemical/nutritional constituents (e.g., 'Histamine', 'Salicylates', 'Gluten', 'Capsaicin', 'Vitamin C', 'Saturated Fat'). Focus heavily on potential dietary triggers, macro/micronutrients, and natural chemicals.\n"
+        f"2. 'chemical_composition': A dictionary mapping ingredients to a LIST of their potential dietary triggers (e.g., 'Histamine', 'Salicylates', 'Gluten', 'FODMAPs', 'Capsaicin', 'Lactose', 'Sulfites', 'Nightshades', 'Amines').\n"
+        f"CRITICAL: Do NOT include generic nutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific allergens.\n"
         f"Return ONLY a valid JSON object matching this structure: "
-        f"{{\"ingredients\": [\"Tomato\"], \"chemical_composition\": {{\"Tomato\": [\"Salicylates\", \"Lycopene\", \"Histamine\", \"Vitamin C\"]}}}}"
+        f"{{\"ingredients\": [\"Tomato\"], \"chemical_composition\": {{\"Tomato\": [\"Salicylates\", \"Histamine\", \"Nightshades\"]}}}}"
     )
 
     try:
@@ -112,7 +113,7 @@ def flare_feature_score(flare):
         min(symptom_count, 6) * 0.4
     )
 
-def run_analysis(logs):
+def run_analysis(logs, confidence_base=0.5):
     stats = {}
     counts = {}
 
@@ -140,9 +141,16 @@ def run_analysis(logs):
     results = []
     for c in stats:
         if counts[c] > 0:
-            score = min(int((stats[c] / counts[c]) * 4), 100)
-            if score > 0: 
-                results.append({"component": c, "score": score, "occurrences": counts[c]})
+            avg_impact = stats[c] / counts[c]
+            
+            # Use the user-defined base for the exponential confidence curve
+            confidence = 1.0 - (confidence_base ** counts[c])
+            
+            raw_score = (avg_impact / 15.0) * 100 
+            final_score = min(int(raw_score * confidence), 100)
+            
+            if final_score > 5: 
+                results.append({"component": c, "score": final_score, "occurrences": counts[c]})
 
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
@@ -155,12 +163,6 @@ if "logs" not in st.session_state:
         st.session_state.logs = []
 
 logs = st.session_state.logs
-
-# --- HEADER ---
-st.markdown(
-    '<div class="subtitle">Track meals, eczema flares, and trigger patterns with a friendlier, more visual dashboard.</div>',
-    unsafe_allow_html=True
-)
 
 # --- SIDEBAR & TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
@@ -229,7 +231,6 @@ with tab2:
             ingredients = l.get("ingredients", [])
             chem_comp = l.get("chemical_composition", {})
             
-            # Removed the raw labels from the info box for a cleaner look
             st.info(f"🍴 **{l['content']}** \n*{t}*")
             
             if ingredients or chem_comp:
@@ -239,7 +240,7 @@ with tab2:
                         if isinstance(chems, list):
                             composition = ", ".join(chems)
                         else:
-                            composition = chems # fallback
+                            composition = chems
                         st.markdown(f"- **{ing}**: {composition}")
                         
         else:
@@ -255,7 +256,22 @@ with tab2:
 
 with tab3:
     st.subheader("Analysis")
-    scores = run_analysis(logs)
+    
+    # NEW: Slider to control the exponential confidence base
+    st.write("Tune how strictly the algorithm verifies patterns:")
+    user_confidence_base = st.slider(
+        "Algorithm Skepticism", 
+        min_value=0.1, 
+        max_value=0.9, 
+        value=0.5, 
+        step=0.1,
+        help="Lower values trigger warnings quickly. Higher values wait for more logs to confirm a pattern."
+    )
+    
+    st.divider()
+
+    # Pass the user's chosen base into the function
+    scores = run_analysis(logs, confidence_base=user_confidence_base)
 
     if not scores:
         st.write("Keep logging! Patterns appear once you have meals and flare-ups recorded.")
@@ -281,7 +297,9 @@ with tab4:
         with st.spinner("Checking your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
             comps = extract_chemicals_from_meal(analysis_data)
-            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
+            
+            # Predict using the default 0.5 confidence so it doesn't break if the user hasn't visited Tab 3
+            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs, confidence_base=0.5)}
 
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")

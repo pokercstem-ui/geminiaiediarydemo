@@ -38,8 +38,10 @@ if not API_KEY:
     st.warning("Add `LLM7_API_KEY` to `.streamlit/secrets.toml`.")
 
 # --- AI PARSING ---
+# --- AI PARSING ---
 def analyze_meal_with_ai(text):
     if not API_KEY:
+        st.sidebar.error("API Key is missing!")
         return {"ingredients": [], "chemical_composition": {}}
 
     prompt = (
@@ -57,12 +59,19 @@ def analyze_meal_with_ai(text):
         )
 
         response = client.chat.completions.create(
-            model="pro",
+            model="default",
             messages=[{"role": "user", "content": prompt}]
         )
 
         result_text = response.choices[0].message.content
+        print(f"RAW AI RESPONSE:\n{result_text}\n") # <-- Prints what the AI actually said
+
         clean_text = result_text.replace("```json", "").replace("```", "").strip()
+        
+        # Sometimes AI adds text before the JSON, let's try to extract just the curly braces
+        if clean_text.find('{') != -1:
+            clean_text = clean_text[clean_text.find('{'):clean_text.rfind('}')+1]
+
         data = json.loads(clean_text)
         
         return {
@@ -70,8 +79,10 @@ def analyze_meal_with_ai(text):
             "chemical_composition": data.get("chemical_composition", {})
         }
 
-    except Exception:
-        st.sidebar.error("AI Error: Could not analyze meal components.")
+    except Exception as e:
+        # This will now print the exact error to your terminal!
+        print(f"AI ERROR DETAILS: {str(e)}") 
+        st.sidebar.error(f"AI Error: {str(e)}")
         return {"ingredients": [], "chemical_composition": {}}
 
 # --- HELPER LOGIC ---

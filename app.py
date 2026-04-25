@@ -20,7 +20,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 DATA_FILE = "logs.json"
 TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 
@@ -32,11 +31,6 @@ SYMPTOM_OPTIONS = [
 AFFECTED_AREA_OPTIONS = [
     "Face", "Eyelids", "Neck", "Chest", "Back", "Arms", "Elbows",
     "Hands", "Fingers", "Stomach", "Legs", "Knees", "Feet", "Other"
-]
-
-TREATMENT_OPTIONS = [
-    "Moisturizer", "Topical steroid", "Topical calcineurin inhibitor",
-    "Antihistamine", "Wet wrap", "Cool compress", "None"
 ]
 
 # --- SECRETS ---
@@ -85,16 +79,13 @@ def calculate_weights(delta_hours):
     return w_fast + w_slow, w_fast, w_slow
 
 def flare_feature_score(flare):
+    # Simplified to only account for severity, areas, and symptoms
     severity = flare.get("severity", 5)
-    itch = flare.get("itch", 0)
-    sleep = flare.get("sleep_disturbance", 0)
     area_count = len(flare.get("affected_areas", []))
     symptom_count = len(flare.get("symptoms", []))
 
     return (
         severity * 1.0 +
-        itch * 1.2 +
-        sleep * 1.0 +
         min(area_count, 6) * 0.8 +
         min(symptom_count, 6) * 0.4
     )
@@ -177,33 +168,25 @@ with tab1:
         with st.container(border=True):
             st.markdown("### 🚨 Log a Flare-up")
             with st.form("flare_form", clear_on_submit=True):
+                # Simplified inputs
                 sev = st.slider("Overall severity", 1, 10, 5)
-                itch = st.slider("Itch severity", 0, 10, 5)
-                sleep_disturbance = st.slider("Sleep disturbance", 0, 10, 0)
                 symptoms = st.multiselect("What symptoms did you have?", SYMPTOM_OPTIONS)
                 affected_areas = st.multiselect("What areas were affected?", AFFECTED_AREA_OPTIONS)
-                other_area = st.text_input("Other affected area (optional)")
-                treatment_used = st.multiselect("What did you use?", TREATMENT_OPTIONS)
-                notes = st.text_area("Extra notes", placeholder="e.g. worse after sweating, new soap, stressed at work")
                 save_flare = st.form_submit_button("Save Flare-up")
 
                 if save_flare:
-                    areas = affected_areas + ([other_area] if other_area.strip() else [])
                     st.session_state.logs.insert(0, {
                         "type": "flareup",
                         "severity": sev,
-                        "itch": itch,
-                        "sleep_disturbance": sleep_disturbance,
                         "symptoms": symptoms,
-                        "affected_areas": areas,
-                        "treatment_used": treatment_used,
-                        "notes": notes,
+                        "affected_areas": affected_areas,
                         "timestamp": datetime.now().isoformat()
                     })
                     with open(DATA_FILE, "w") as f:
                         json.dump(st.session_state.logs, f)
                     st.success("Flare-up logged.")
                     st.rerun()
+
 with tab2:
     st.subheader("History")
     if st.button("🗑️ Clear All History"):
@@ -217,21 +200,16 @@ with tab2:
         if l["type"] == "meal":
             comp_list = l.get("components", [])
             labels = " ".join([f"`{c}`" for c in comp_list]) if comp_list else "*No tracked components*"
-            st.info(f"🍴 **{l['content']}**  \n{labels}  \n*{t}*")
+            st.info(f"🍴 **{l['content']}** \n{labels}  \n*{t}*")
         else:
+            # Simplified display
             symptoms = ", ".join(l.get("symptoms", [])) or "Not specified"
             areas = ", ".join(l.get("affected_areas", [])) or "Not specified"
-            treatments = ", ".join(l.get("treatment_used", [])) or "None"
-            notes = l.get("notes", "").strip() or "None"
 
             st.error(
                 f"🚨 **Flare-up**: Severity {l.get('severity', 0)}  \n"
-                f"**Itch:** {l.get('itch', 0)}/10  \n"
-                f"**Sleep disturbance:** {l.get('sleep_disturbance', 0)}/10  \n"
                 f"**Symptoms:** {symptoms}  \n"
                 f"**Affected areas:** {areas}  \n"
-                f"**Treatment used:** {treatments}  \n"
-                f"**Notes:** {notes}  \n"
                 f"*{t}*"
             )
 

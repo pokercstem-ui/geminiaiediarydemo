@@ -6,6 +6,7 @@ from datetime import datetime
 import openai
 
 # --- PAGE SETUP ---
+st.set_page_config(page_title="GutPattern", page_icon="🧩")
 st.markdown("# 🧩 GutPattern")
 st.caption("Track meals, eczema flares, and trigger patterns in one clean place.")
 
@@ -14,7 +15,6 @@ st.markdown(
     <style>
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
-    
     </style>
     """,
     unsafe_allow_html=True
@@ -39,14 +39,18 @@ if not API_KEY:
     st.warning("Add `LLM7_API_KEY` to `.streamlit/secrets.toml`.")
 
 # --- AI PARSING ---
-def get_components_from_ai(text):
+def analyze_meal_with_ai(text):
+    """Now returns components, ingredients, and chemical composition."""
     if not API_KEY:
-        return []
+        return {"components": [], "ingredients": [], "chemical_composition": {}}
 
     prompt = (
-        f"Analyze this meal: '{text}'. Which of these components does it contain: "
-        f"Capsaicin, Fat, Flavonoids, omega-6, or none? Only flag them when they are in large amounts. "
-        f"Return ONLY a JSON object like this: {{\"components\": [\"Capsaicin\", \"omega-6\"]}}"
+        f"Analyze this meal: '{text}'. Provide the following:\n"
+        f"1. 'components': Which of these tracked items it contains in large amounts: Capsaicin, Fat, Flavonoids, omega-6.\n"
+        f"2. 'ingredients': A list of the main base ingredients in the meal.\n"
+        f"3. 'chemical_composition': A dictionary where the keys are the ingredients, and the values are short descriptions of their main chemical/nutritional constituents (e.g., 'Carbohydrates, Potassium, Vitamin C').\n"
+        f"Return ONLY a valid JSON object matching this structure: "
+        f"{{\"components\": [\"Fat\"], \"ingredients\": [\"Potato\"], \"chemical_composition\": {{\"Potato\": \"Starch, Fiber, Potassium\"}}}}"
     )
 
     try:
@@ -63,12 +67,20 @@ def get_components_from_ai(text):
         result_text = response.choices[0].message.content
         clean_text = result_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
-        components = data.get("components", [])
-        return [c for c in components if c in TRACKED_COMPONENTS]
+        
+        # Ensure we only track valid components for the analysis engine
+        raw_components = data.get("components", [])
+        valid_components = [c for c in raw_components if c in TRACKED_COMPONENTS]
+        
+        return {
+            "components": valid_components,
+            "ingredients": data.get("ingredients", []),
+            "chemical_composition": data.get("chemical_composition", {})
+        }
 
     except Exception:
         st.sidebar.error("AI Error: Could not analyze meal components.")
-        return []
+        return {"components": [], "ingredients": [], "chemical_composition": {}}
 
 # --- ANALYSIS LOGIC ---
 def calculate_weights(delta_hours):
@@ -79,7 +91,6 @@ def calculate_weights(delta_hours):
     return w_fast + w_slow, w_fast, w_slow
 
 def flare_feature_score(flare):
-    # Simplified to only account for severity, areas, and symptoms
     severity = flare.get("severity", 5)
     area_count = len(flare.get("affected_areas", []))
     symptom_count = len(flare.get("symptoms", []))
@@ -126,9 +137,6 @@ if "logs" not in st.session_state:
         st.session_state.logs = []
 
 logs = st.session_state.logs
-meal_count = sum(1 for l in logs if l["type"] == "meal")
-flare_count = sum(1 for l in logs if l["type"] == "flareup")
-latest_flare = next((l for l in logs if l["type"] == "flareup"), None)
 
 # --- HEADER ---
 st.markdown(
@@ -136,8 +144,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- SIDEBAR ---
-
+# --- SIDEBAR & TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 
 with tab1:
@@ -150,13 +157,17 @@ with tab1:
             with st.form("meal_form", clear_on_submit=True):
                 meal_txt = st.text_input("What did you eat?", placeholder="e.g. French fries and spicy dipping sauce")
                 save_meal = st.form_submit_button("Save Meal")
+                
                 if save_meal and meal_txt:
-                    with st.spinner("AI is analyzing components..."):
-                        comps = get_components_from_ai(meal_txt)
+                    with st.spinner("AI is analyzing ingredients and chemicals..."):
+                        analysis_data = analyze_meal_with_ai(meal_txt)
+                        
                         st.session_state.logs.insert(0, {
                             "type": "meal",
                             "content": meal_txt,
-                            "components": comps,
+                            "components": analysis_data["components"],
+                            "ingredients": analysis_data["ingredients"],
+                            "chemical_composition": analysis_data["chemical_composition"],
                             "timestamp": datetime.now().isoformat()
                         })
                         with open(DATA_FILE, "w") as f:
@@ -168,7 +179,6 @@ with tab1:
         with st.container(border=True):
             st.markdown("### 🚨 Log a Flare-up")
             with st.form("flare_form", clear_on_submit=True):
-                # Simplified inputs
                 sev = st.slider("Overall severity", 1, 10, 5)
                 symptoms = st.multiselect("What symptoms did you have?", SYMPTOM_OPTIONS)
                 affected_areas = st.multiselect("What areas were affected?", AFFECTED_AREA_OPTIONS)
@@ -197,12 +207,24 @@ with tab2:
 
     for l in logs:
         t = datetime.fromisoformat(l["timestamp"]).strftime("%b %d, %H:%M")
+        
         if l["type"] == "meal":
             comp_list = l.get("components", [])
+            ingredients = l.get("ingredients", [])
+            chem_comp = l.get("chemical_composition", {})
+            
             labels = " ".join([f"`{c}`" for c in comp_list]) if comp_list else "*No tracked components*"
+            
             st.info(f"🍴 **{l['content']}** \n{labels}  \n*{t}*")
+            
+            # Display the new ingredient breakdown inside an expander
+            if ingredients or chem_comp:
+                with st.expander("View Breakdown"):
+                    for ing in ingredients:
+                        composition = chem_comp.get(ing, "Composition unknown")
+                        st.markdown(f"- **{ing}**: {composition}")
+                        
         else:
-            # Simplified display
             symptoms = ", ".join(l.get("symptoms", [])) or "Not specified"
             areas = ", ".join(l.get("affected_areas", [])) or "Not specified"
 
@@ -238,7 +260,10 @@ with tab4:
 
     if check_btn and predict_txt:
         with st.spinner("Checking your history..."):
-            comps = get_components_from_ai(predict_txt)
+            # Update prediction logic to handle the new dictionary output
+            analysis_data = analyze_meal_with_ai(predict_txt)
+            comps = analysis_data.get("components", [])
+            
             analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
 
             if not comps:

@@ -21,7 +21,6 @@ st.markdown(
 )
 
 DATA_FILE = "logs.json"
-TRACKED_COMPONENTS = ['Capsaicin', 'Fat', 'Flavonoids', 'omega-6']
 
 SYMPTOM_OPTIONS = [
     "Itching", "Redness", "Dryness", "Cracking", "Oozing",
@@ -40,17 +39,15 @@ if not API_KEY:
 
 # --- AI PARSING ---
 def analyze_meal_with_ai(text):
-    """Now returns components, ingredients, and chemical composition."""
     if not API_KEY:
-        return {"components": [], "ingredients": [], "chemical_composition": {}}
+        return {"ingredients": [], "chemical_composition": {}}
 
     prompt = (
         f"Analyze this meal: '{text}'. Provide the following:\n"
-        f"1. 'components': Which of these tracked items it contains in large amounts: Capsaicin, Fat, Flavonoids, omega-6.\n"
-        f"2. 'ingredients': A list of the main base ingredients in the meal.\n"
-        f"3. 'chemical_composition': A dictionary where the keys are the ingredients, and the values are short descriptions of their main chemical/nutritional constituents (e.g., 'Carbohydrates, Potassium, Vitamin C').\n"
+        f"1. 'ingredients': A list of the main base ingredients.\n"
+        f"2. 'chemical_composition': A dictionary where keys are the ingredients, and values are LISTS of their main chemical/nutritional constituents (e.g., 'Histamine', 'Salicylates', 'Gluten', 'Capsaicin', 'Vitamin C', 'Saturated Fat'). Focus heavily on potential dietary triggers, macro/micronutrients, and natural chemicals.\n"
         f"Return ONLY a valid JSON object matching this structure: "
-        f"{{\"components\": [\"Fat\"], \"ingredients\": [\"Potato\"], \"chemical_composition\": {{\"Potato\": \"Starch, Fiber, Potassium\"}}}}"
+        f"{{\"ingredients\": [\"Tomato\"], \"chemical_composition\": {{\"Tomato\": [\"Salicylates\", \"Lycopene\", \"Histamine\", \"Vitamin C\"]}}}}"
     )
 
     try:
@@ -60,7 +57,7 @@ def analyze_meal_with_ai(text):
         )
 
         response = client.chat.completions.create(
-            model="default",
+            model="pro",
             messages=[{"role": "user", "content": prompt}]
         )
 
@@ -68,19 +65,29 @@ def analyze_meal_with_ai(text):
         clean_text = result_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
         
-        # Ensure we only track valid components for the analysis engine
-        raw_components = data.get("components", [])
-        valid_components = [c for c in raw_components if c in TRACKED_COMPONENTS]
-        
         return {
-            "components": valid_components,
             "ingredients": data.get("ingredients", []),
             "chemical_composition": data.get("chemical_composition", {})
         }
 
     except Exception:
         st.sidebar.error("AI Error: Could not analyze meal components.")
-        return {"components": [], "ingredients": [], "chemical_composition": {}}
+        return {"ingredients": [], "chemical_composition": {}}
+
+# --- HELPER LOGIC ---
+def extract_chemicals_from_meal(meal):
+    """Extracts a flat, unique list of formatted chemicals from a meal's composition dict."""
+    chemicals = set()
+    chem_comp = meal.get("chemical_composition", {})
+    for chem_list in chem_comp.values():
+        if isinstance(chem_list, list):
+            for c in chem_list:
+                chemicals.add(c.strip().title())
+        elif isinstance(chem_list, str):
+            # Fallback just in case the AI returns a comma-separated string
+            for c in chem_list.split(','):
+                chemicals.add(c.strip().title())
+    return list(chemicals)
 
 # --- ANALYSIS LOGIC ---
 def calculate_weights(delta_hours):
@@ -102,29 +109,37 @@ def flare_feature_score(flare):
     )
 
 def run_analysis(logs):
-    stats = {c: 0.0 for c in TRACKED_COMPONENTS}
-    counts = {c: 0 for c in TRACKED_COMPONENTS}
+    stats = {}
+    counts = {}
 
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
 
+    # Calculate dynamic scores for all detected chemicals
     for meal in meals:
         m_time = datetime.fromisoformat(meal["timestamp"])
-        for comp in meal.get("components", []):
-            if comp in stats:
-                counts[comp] += 1
-                for f in flares:
-                    f_time = datetime.fromisoformat(f["timestamp"])
-                    delta = (f_time - m_time).total_seconds() / 3600.0
-                    if 0 <= delta <= 72:
-                        weight, _, _ = calculate_weights(delta)
-                        stats[comp] += flare_feature_score(f) * weight
+        chemicals = extract_chemicals_from_meal(meal)
+        
+        for comp in chemicals:
+            if comp not in stats:
+                stats[comp] = 0.0
+                counts[comp] = 0
+            
+            counts[comp] += 1
+            
+            for f in flares:
+                f_time = datetime.fromisoformat(f["timestamp"])
+                delta = (f_time - m_time).total_seconds() / 3600.0
+                if 0 <= delta <= 72:
+                    weight, _, _ = calculate_weights(delta)
+                    stats[comp] += flare_feature_score(f) * weight
 
     results = []
-    for c in TRACKED_COMPONENTS:
+    for c in stats:
         if counts[c] > 0:
             score = min(int((stats[c] / counts[c]) * 4), 100)
-            results.append({"component": c, "score": score})
+            if score > 0: # Only return chemicals that have some correlation
+                results.append({"component": c, "score": score, "occurrences": counts[c]})
 
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
@@ -159,13 +174,12 @@ with tab1:
                 save_meal = st.form_submit_button("Save Meal")
                 
                 if save_meal and meal_txt:
-                    with st.spinner("AI is analyzing ingredients and chemicals..."):
+                    with st.spinner("AI is extracting chemical composition..."):
                         analysis_data = analyze_meal_with_ai(meal_txt)
                         
                         st.session_state.logs.insert(0, {
                             "type": "meal",
                             "content": meal_txt,
-                            "components": analysis_data["components"],
                             "ingredients": analysis_data["ingredients"],
                             "chemical_composition": analysis_data["chemical_composition"],
                             "timestamp": datetime.now().isoformat()
@@ -209,19 +223,24 @@ with tab2:
         t = datetime.fromisoformat(l["timestamp"]).strftime("%b %d, %H:%M")
         
         if l["type"] == "meal":
-            comp_list = l.get("components", [])
             ingredients = l.get("ingredients", [])
             chem_comp = l.get("chemical_composition", {})
             
-            labels = " ".join([f"`{c}`" for c in comp_list]) if comp_list else "*No tracked components*"
+            # Extract flat chemicals just for the display labels
+            all_chems = extract_chemicals_from_meal(l)
+            labels = " ".join([f"`{c}`" for c in sorted(all_chems)]) if all_chems else "*No chemicals detected*"
             
             st.info(f"🍴 **{l['content']}** \n{labels}  \n*{t}*")
             
-            # Display the new ingredient breakdown inside an expander
             if ingredients or chem_comp:
                 with st.expander("View Breakdown"):
                     for ing in ingredients:
-                        composition = chem_comp.get(ing, "Composition unknown")
+                        # Grab the list of chemicals and format as a string
+                        chems = chem_comp.get(ing, [])
+                        if isinstance(chems, list):
+                            composition = ", ".join(chems)
+                        else:
+                            composition = chems # fallback
                         st.markdown(f"- **{ing}**: {composition}")
                         
         else:
@@ -242,10 +261,11 @@ with tab3:
     if not scores:
         st.write("Keep logging! Patterns appear once you have meals and flare-ups recorded.")
     else:
+        st.caption("Showing chemical constituents ranked by correlation to your flare-ups.")
         for s in scores:
             col1, col2 = st.columns([3, 1])
             with col1:
-                st.write(f"**{s['component']}**")
+                st.write(f"**{s['component']}** *(Logged {s['occurrences']} times)*")
                 st.progress(s["score"] / 100)
             with col2:
                 st.metric("Score", f"{s['score']}/100")
@@ -260,14 +280,15 @@ with tab4:
 
     if check_btn and predict_txt:
         with st.spinner("Checking your history..."):
-            # Update prediction logic to handle the new dictionary output
             analysis_data = analyze_meal_with_ai(predict_txt)
-            comps = analysis_data.get("components", [])
+            
+            # Use the helper function to flatten the predicted meal's dict into a list of chemicals
+            comps = extract_chemicals_from_meal(analysis_data)
             
             analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
 
             if not comps:
-                st.warning("No tracked components found in that meal.")
+                st.warning("No tracked chemicals found in that meal.")
             else:
                 max_risk = 0
                 for c in comps:
@@ -277,8 +298,8 @@ with tab4:
 
                 st.divider()
                 if max_risk > 70:
-                    st.error("### High Risk Detected\nYour history suggests this meal might lead to a strong reaction.")
+                    st.error("### High Risk Detected\nYour history suggests this meal contains chemicals that frequently correlate with your flare-ups.")
                 elif max_risk > 40:
-                    st.warning("### Caution\nThere is a moderate historical correlation with flare-ups.")
+                    st.warning("### Caution\nThere is a moderate historical correlation with your flare-ups.")
                 else:
-                    st.success("### Likely Low Risk\nNo strong patterns found for these ingredients.")
+                    st.success("### Likely Low Risk\nNo strong patterns found for these chemical constituents.")

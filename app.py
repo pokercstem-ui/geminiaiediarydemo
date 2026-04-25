@@ -1,5 +1,4 @@
 import streamlit as st
-import math
 import json
 import os
 from datetime import datetime
@@ -94,65 +93,90 @@ def extract_chemicals_from_meal(meal):
                 chemicals.add(c.strip().title())
     return list(chemicals)
 
-# --- ANALYSIS LOGIC ---
-def calculate_weights(delta_hours):
-    if delta_hours < 0:
-        return 0, 0, 0
-    w_fast = 1.0 * math.exp(-0.5 * delta_hours)
-    w_slow = 0.8 * math.exp(-((delta_hours - 36) ** 2) / (2 * 6 ** 2))
-    return w_fast + w_slow, w_fast, w_slow
 
-def flare_feature_score(flare):
-    severity = flare.get("severity", 5)
-    area_count = len(flare.get("affected_areas", []))
-    symptom_count = len(flare.get("symptoms", []))
-
-    return (
-        severity * 1.0 +
-        min(area_count, 6) * 0.8 +
-        min(symptom_count, 6) * 0.4
-    )
-
-def run_analysis(logs, confidence_base=0.5):
-    stats = {}
-    counts = {}
-
+# --- BAYESIAN ANALYSIS LOGIC ---
+def run_analysis(logs):
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
 
+    if not meals:
+        return []
+
+    meal_records = []
+    global_hits = 0
+
+    # 1. Determine if each meal was a "Trigger Meal"
     for meal in meals:
         m_time = datetime.fromisoformat(meal["timestamp"])
         chemicals = extract_chemicals_from_meal(meal)
         
-        for comp in chemicals:
-            if comp not in stats:
-                stats[comp] = 0.0
-                counts[comp] = 0
+        is_hit = False
+        flare_severity = 0
+        
+        # Check if a flare happened within 48 hours after this meal
+        for f in flares:
+            f_time = datetime.fromisoformat(f["timestamp"])
+            delta = (f_time - m_time).total_seconds() / 3600.0
+            if 0 <= delta <= 48:
+                is_hit = True
+                flare_severity = max(flare_severity, f.get("severity", 5))
+                
+        if is_hit:
+            global_hits += 1
             
-            counts[comp] += 1
-            
-            for f in flares:
-                f_time = datetime.fromisoformat(f["timestamp"])
-                delta = (f_time - m_time).total_seconds() / 3600.0
-                if 0 <= delta <= 72:
-                    weight, _, _ = calculate_weights(delta)
-                    stats[comp] += flare_feature_score(f) * weight
+        meal_records.append({
+            "chemicals": chemicals,
+            "is_hit": is_hit,
+            "severity": flare_severity
+        })
 
+    # Global Baseline: What % of ALL meals result in a flare?
+    global_rate = global_hits / len(meals) if meals else 0
+    
+    # 2. Tally individual chemicals
+    chem_stats = {}
+    for mr in meal_records:
+        for c in mr["chemicals"]:
+            if c not in chem_stats:
+                chem_stats[c] = {"eats": 0, "hits": 0, "severity_sum": 0}
+            chem_stats[c]["eats"] += 1
+            if mr["is_hit"]:
+                chem_stats[c]["hits"] += 1
+                chem_stats[c]["severity_sum"] += mr["severity"]
+
+    # 3. Apply Bayesian Smoothing
+    SMOOTHING_WEIGHT = 3.0 # Adds 3 'average' phantom meals to stop 100% jumps
     results = []
-    for c in stats:
-        if counts[c] > 0:
-            avg_impact = stats[c] / counts[c]
+    
+    for c, data in chem_stats.items():
+        eats = data["eats"]
+        hits = data["hits"]
+        
+        # Pulls low-data items toward the global average
+        smoothed_rate = (hits + (global_rate * SMOOTHING_WEIGHT)) / (eats + SMOOTHING_WEIGHT)
+        
+        # Risk Multiplier: Is this chemical WORSE than your normal baseline?
+        # A multiplier of 1.0 means it's totally neutral/safe.
+        risk_multiplier = smoothed_rate / max(global_rate, 0.05) 
+        
+        if risk_multiplier > 1.1: # Only score it if it's at least 10% riskier than average
+            avg_sev = (data["severity_sum"] / hits) if hits > 0 else 0
+            sev_multiplier = 1.0 + (avg_sev / 20.0) # Boost if flares are severe
             
-            # Use the user-defined base for the exponential confidence curve
-            confidence = 1.0 - (confidence_base ** counts[c])
+            # Map the multiplier to a 0-100 scale
+            raw_score = (risk_multiplier - 1.0) * 35 * sev_multiplier 
+            final_score = min(int(raw_score), 100)
             
-            raw_score = (avg_impact / 15.0) * 100 
-            final_score = min(int(raw_score * confidence), 100)
-            
-            if final_score > 5: 
-                results.append({"component": c, "score": final_score, "occurrences": counts[c]})
-
+            if final_score > 5:
+                results.append({
+                    "component": c, 
+                    "score": final_score, 
+                    "occurrences": eats,
+                    "hit_rate": int((hits/eats)*100) if eats > 0 else 0
+                })
+                
     return sorted(results, key=lambda x: x["score"], reverse=True)
+
 
 # --- LOAD DATA ---
 if "logs" not in st.session_state:
@@ -237,10 +261,7 @@ with tab2:
                 with st.expander("View Breakdown"):
                     for ing in ingredients:
                         chems = chem_comp.get(ing, [])
-                        if isinstance(chems, list):
-                            composition = ", ".join(chems)
-                        else:
-                            composition = chems
+                        composition = ", ".join(chems) if isinstance(chems, list) else chems
                         st.markdown(f"- **{ing}**: {composition}")
                         
         else:
@@ -256,31 +277,16 @@ with tab2:
 
 with tab3:
     st.subheader("Analysis")
-    
-    # NEW: Slider to control the exponential confidence base
-    st.write("Tune how strictly the algorithm verifies patterns:")
-    user_confidence_base = st.slider(
-        "Algorithm Skepticism", 
-        min_value=0.1, 
-        max_value=0.9, 
-        value=0.5, 
-        step=0.1,
-        help="Lower values trigger warnings quickly. Higher values wait for more logs to confirm a pattern."
-    )
-    
-    st.divider()
-
-    # Pass the user's chosen base into the function
-    scores = run_analysis(logs, confidence_base=user_confidence_base)
+    scores = run_analysis(logs)
 
     if not scores:
-        st.write("Keep logging! Patterns appear once you have meals and flare-ups recorded.")
+        st.write("Keep logging! Patterns appear once you have enough meals and safe days recorded.")
     else:
-        st.caption("Showing chemical constituents ranked by correlation to your flare-ups.")
+        st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline.")
         for s in scores:
             col1, col2 = st.columns([3, 1])
             with col1:
-                st.write(f"**{s['component']}** *(Logged {s['occurrences']} times)*")
+                st.write(f"**{s['component']}** *(Eaten {s['occurrences']} times | Triggered flare {s['hit_rate']}% of the time)*")
                 st.progress(s["score"] / 100)
             with col2:
                 st.metric("Score", f"{s['score']}/100")
@@ -297,9 +303,7 @@ with tab4:
         with st.spinner("Checking your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
             comps = extract_chemicals_from_meal(analysis_data)
-            
-            # Predict using the default 0.5 confidence so it doesn't break if the user hasn't visited Tab 3
-            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs, confidence_base=0.5)}
+            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
 
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")

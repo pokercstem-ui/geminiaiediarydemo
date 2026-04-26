@@ -48,7 +48,7 @@ def analyze_meal_with_ai(text):
         f"2. 'chemical_composition': A dictionary mapping ingredients to a LIST of their potential dietary triggers (e.g., 'Histamine', 'Salicylates', 'Gluten', 'FODMAPs', 'Capsaicin', 'Lactose', 'Sulfites', 'Nightshades', 'Amines').\n"
         f"CRITICAL: Do NOT include generic nutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific allergens.\n"
         f"Return ONLY a valid JSON object matching this structure: "
-        f"{{\"ingredients\": [\"Tomato\"], \"chemical_composition\": {{\"Tomato\": [\"Salicylates\", \"Histamine\", \"Nightshades\"]}}}}"
+        f'{{"ingredients": ["Tomato"], "chemical_composition": {{"Tomato": ["Salicylates", "Histamine", "Nightshades"]}}}}'
     )
 
     try:
@@ -93,6 +93,102 @@ def extract_chemicals_from_meal(meal):
                 chemicals.add(c.strip().title())
     return list(chemicals)
 
+# --- NEW: AI REVIEW FUNCTIONS ---
+def build_evidence_summary(logs, scores, max_items=8):
+    """Compacts recent log data for AI review without overwhelming the model"""
+    meals = [l for l in logs if l["type"] == "meal"][:max_items]
+    flares = [l for l in logs if l["type"] == "flareup"][:max_items]
+
+    meal_summary = []
+    for m in meals:
+        meal_summary.append({
+            "content": m.get("content", ""),
+            "ingredients": m.get("ingredients", []),
+            "chemicals": extract_chemicals_from_meal(m),
+            "timestamp": m.get("timestamp", "")
+        })
+
+    flare_summary = []
+    for f in flares:
+        flare_summary.append({
+            "severity": f.get("severity", 0),
+            "symptoms": f.get("symptoms", []),
+            "affected_areas": f.get("affected_areas", []),
+            "timestamp": f.get("timestamp", "")
+        })
+
+    return {
+        "top_scores": scores[:5],
+        "recent_meals": meal_summary,
+        "recent_flares": flare_summary,
+        "total_meals": len([l for l in logs if l["type"] == "meal"]),
+        "total_flares": len([l for l in logs if l["type"] == "flareup"])
+    }
+
+def ai_review_analysis(logs, scores):
+    """Sends analysis results + log evidence to AI for second opinion"""
+    if not API_KEY:
+        return {"agreement": "unknown", "reason": "Missing API key.", "confidence": 0}
+
+    evidence = build_evidence_summary(logs, scores)
+
+    prompt = f"""
+You are reviewing a dietary trigger analysis for eczema patterns.
+The mathematical model ranked these chemicals as triggers based on timing and frequency.
+
+Task:
+1. Decide whether you agree with the mathematical judgement.
+2. Return only JSON.
+3. Be conservative. If evidence is weak, say partial or uncertain.
+
+Return schema:
+{{
+  "agreement": "agree" | "partial" | "disagree",
+  "confidence": 0-100,
+  "reason": "short explanation",
+  "notable_support": ["optional bullet-like strings"],
+  "notable_concerns": ["optional bullet-like strings"]
+}}
+
+Evidence:
+{json.dumps(evidence, ensure_ascii=False, indent=2)}
+""".strip()
+
+    try:
+        client = openai.OpenAI(
+            base_url="https://api.llm7.io/v1",
+            api_key=API_KEY,
+        )
+        response = client.chat.completions.create(
+            model="default",
+            messages=[
+                {"role": "system", "content": "You are a cautious medical-pattern review assistant. Do not claim causation. Focus on whether the statistical pattern makes sense given the data."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1  # Low temperature for consistent JSON
+        )
+
+        result_text = response.choices[0].message.content.strip()
+        if result_text.find('{') != -1:
+            result_text = result_text[result_text.find('{'):result_text.rfind('}')+1]
+        data = json.loads(result_text)
+
+        return {
+            "agreement": data.get("agreement", "unknown"),
+            "confidence": data.get("confidence", 0),
+            "reason": data.get("reason", ""),
+            "notable_support": data.get("notable_support", []),
+            "notable_concerns": data.get("notable_concerns", [])
+        }
+    except Exception as e:
+        return {
+            "agreement": "unknown",
+            "confidence": 0,
+            "reason": f"AI review failed: {str(e)}",
+            "notable_support": [],
+            "notable_concerns": []
+        }
+# --- END NEW: AI REVIEW FUNCTIONS ---
 
 # --- BAYESIAN ANALYSIS LOGIC ---
 def run_analysis(logs):
@@ -120,7 +216,7 @@ def run_analysis(logs):
             if 0 <= delta <= 48:
                 is_hit = True
                 flare_severity = max(flare_severity, f.get("severity", 5))
-                
+            
         if is_hit:
             global_hits += 1
             
@@ -169,11 +265,11 @@ def run_analysis(logs):
             
             if final_score > 5:
                 results.append({
-                    "component": c, 
-                    "score": final_score, 
-                    "occurrences": eats,
-                    "hit_rate": int((hits/eats)*100) if eats > 0 else 0
-                })
+                        "component": c, 
+                        "score": final_score, 
+                        "occurrences": eats,
+                        "hit_rate": int((hits/eats)*100) if eats > 0 else 0
+                    })
                 
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
@@ -206,17 +302,17 @@ with tab1:
                     with st.spinner("AI is extracting chemical composition..."):
                         analysis_data = analyze_meal_with_ai(meal_txt)
                         
-                        st.session_state.logs.insert(0, {
+                    st.session_state.logs.insert(0, {
                             "type": "meal",
                             "content": meal_txt,
                             "ingredients": analysis_data["ingredients"],
                             "chemical_composition": analysis_data["chemical_composition"],
                             "timestamp": datetime.now().isoformat()
                         })
-                        with open(DATA_FILE, "w") as f:
-                            json.dump(st.session_state.logs, f)
-                        st.success("Meal logged successfully!")
-                        st.rerun()
+                    with open(DATA_FILE, "w") as f:
+                        json.dump(st.session_state.logs, f)
+                    st.success("Meal logged successfully!")
+                    st.rerun()
 
     with right:
         with st.container(border=True):
@@ -276,6 +372,7 @@ with tab2:
             )
 
 with tab3:
+    ### MODIFIED: Now includes AI review of mathematical analysis ###
     st.subheader("Analysis")
     scores = run_analysis(logs)
 
@@ -290,6 +387,30 @@ with tab3:
                 st.progress(s["score"] / 100)
             with col2:
                 st.metric("Score", f"{s['score']}/100")
+
+        ### NEW: AI Review Section - Runs automatically when scores available ###
+        st.divider()
+        st.subheader("🤖 AI Review")
+        with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
+            ai_review = ai_review_analysis(logs, scores)
+
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.metric("AI Agreement", ai_review['agreement'].title())
+            st.metric("AI Confidence", f"{ai_review['confidence']}%")
+        with col2:
+            st.write(f"**Reason:**\n{ai_review['reason']}")
+
+        if ai_review.get("notable_support"):
+            st.success("**Supporting evidence:**")
+            for item in ai_review["notable_support"]:
+                st.write(f"• {item}")
+
+        if ai_review.get("notable_concerns"):
+            st.warning("**Areas of uncertainty:**")
+            for item in ai_review["notable_concerns"]:
+                st.write(f"• {item}")
+        ### END NEW: AI Review Section ###
 
 with tab4:
     st.subheader("Risk Forecast")

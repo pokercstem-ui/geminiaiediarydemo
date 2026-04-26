@@ -295,6 +295,14 @@ with tab1:
         with st.container(border=True):
             st.markdown("### 🍎 Log a Meal")
             with st.form("meal_form", clear_on_submit=True):
+                # NEW: Date/time picker for meal logging
+                col_date1, col_time1 = st.columns(2)
+                with col_date1:
+                    meal_date = st.date_input("Meal date", value=datetime.now().date())
+                with col_time1:
+                    meal_time = st.time_input("Meal time", value=datetime.now().time())
+                meal_datetime = datetime.combine(meal_date, meal_time)
+                
                 meal_txt = st.text_input("What did you eat?", placeholder="e.g. French fries and spicy dipping sauce")
                 save_meal = st.form_submit_button("Save Meal")
                 
@@ -307,17 +315,25 @@ with tab1:
                             "content": meal_txt,
                             "ingredients": analysis_data["ingredients"],
                             "chemical_composition": analysis_data["chemical_composition"],
-                            "timestamp": datetime.now().isoformat()
+                            "timestamp": meal_datetime.isoformat()  # MODIFIED: Uses selected datetime
                         })
                     with open(DATA_FILE, "w") as f:
                         json.dump(st.session_state.logs, f)
-                    st.success("Meal logged successfully!")
+                    st.success(f"Meal logged at {meal_datetime.strftime('%Y-%m-%d %H:%M')}!")
                     st.rerun()
 
     with right:
         with st.container(border=True):
             st.markdown("### 🚨 Log a Flare-up")
             with st.form("flare_form", clear_on_submit=True):
+                # NEW: Date/time picker for flare logging  
+                col_date2, col_time2 = st.columns(2)
+                with col_date2:
+                    flare_date = st.date_input("Flare date", value=datetime.now().date())
+                with col_time2:
+                    flare_time = st.time_input("Flare time", value=datetime.now().time())
+                flare_datetime = datetime.combine(flare_date, flare_time)
+                
                 sev = st.slider("Overall severity", 1, 10, 5)
                 symptoms = st.multiselect("What symptoms did you have?", SYMPTOM_OPTIONS)
                 affected_areas = st.multiselect("What areas were affected?", AFFECTED_AREA_OPTIONS)
@@ -329,13 +345,12 @@ with tab1:
                         "severity": sev,
                         "symptoms": symptoms,
                         "affected_areas": affected_areas,
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": flare_datetime.isoformat()  # MODIFIED: Uses selected datetime
                     })
                     with open(DATA_FILE, "w") as f:
                         json.dump(st.session_state.logs, f)
-                    st.success("Flare-up logged.")
+                    st.success(f"Flare-up logged at {flare_datetime.strftime('%Y-%m-%d %H:%M')}.")
                     st.rerun()
-
 with tab2:
     st.subheader("History")
     if st.button("🗑️ Clear All History"):

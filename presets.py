@@ -8,7 +8,9 @@ def get_preset_logs():
     logs = []
 
     def add_meal(days_ago, hour, content, ingredients, chem_comp):
-        t = base_date - timedelta(days=days_ago) + timedelta(hours=hour)
+        # Add a randomized minute to make the timestamp unique
+        minute = random.randint(0, 59)
+        t = base_date - timedelta(days=days_ago) + timedelta(hours=hour, minutes=minute)
         logs.append({
             "type": "meal",
             "content": content,
@@ -18,7 +20,9 @@ def get_preset_logs():
         })
 
     def add_flare(days_ago, hour, severity, symptoms, areas):
-        t = base_date - timedelta(days=days_ago) + timedelta(hours=hour)
+        # Add a randomized minute to make the timestamp unique
+        minute = random.randint(0, 59)
+        t = base_date - timedelta(days=days_ago) + timedelta(hours=hour, minutes=minute)
         logs.append({
             "type": "flareup",
             "severity": severity,
@@ -37,34 +41,40 @@ def get_preset_logs():
         add_meal(d+0, random.randint(12,13), "Sliced Fish Rice Noodle Soup", ["Grass Carp", "Rice Noodles", "Ginger"], {"Grass Carp": ["Parvalbumin"], "Ginger": ["Salicylic Acid", "Gingerol"]})
         add_meal(d+0, random.randint(14,18), "Fuji Apple (Snack)", ["Apple"], {"Apple": ["Salicylic Acid", "Fructose"]})
         add_meal(d+0, 19, "Steamed Chicken with Choy Sum", ["Chicken", "Choy Sum", "White Rice"], {"Chicken": ["Tyramine"], "Choy Sum": ["Salicylic Acid"]})
+        
         # Day 2 (Trigger: Shellfish)
         add_meal(d+1, 8, "Macaroni in Soup with Spam", ["Macaroni", "Spam", "Broth"], {"Macaroni": ["Gliadin", "Glutenin"], "Spam": ["Sodium Nitrite", "Tyramine"]})
         add_meal(d+1, 13, "Dim Sum: Har Gow & Siu Mai", ["Shrimp", "Pork", "Wheat Wrapper"], {"Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"], "Wheat Wrapper": ["Gliadin"]})
         add_meal(d+1, 16, "Hot Milk Tea (Snack)", ["Black Tea", "Evaporated Milk"], {"Black Tea": ["Tannic Acid"], "Evaporated Milk": ["Casein", "Lactose"]})
         add_meal(d+1, 19, "Shrimp Wonton Noodle Soup", ["Shrimp", "Pork", "Wheat Noodles", "Broth"], {"Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"], "Wheat Noodles": ["Gliadin"]})
         add_flare(d+1, 22, 7, ["Itching", "Redness", "Swelling"], ["Face", "Neck", "Arms"])
+        
         # Day 3 (Safe)
         add_meal(d+2, 8, "Plain Oatmeal with Soy Milk", ["Rolled Oats", "Soy Milk"], {"Rolled Oats": ["Avenin"], "Soy Milk": ["Isoflavones"]})
         add_meal(d+2, 13, "Vegetarian Fried Rice", ["Rice", "Choy Sum", "Egg"], {"Choy Sum": ["Salicylic Acid"], "Egg": ["Ovalbumin", "Ovomucoid"]})
         add_meal(d+2, 16, "Fresh Mango (Snack)", ["Mango"], {"Mango": ["Urushiol-related compounds", "Fructose"]})
         add_meal(d+2, 19, "Pan-fried Salmon with Asparagus", ["Salmon", "Asparagus"], {"Salmon": ["Parvalbumin"], "Asparagus": ["Fructans"]})
+        
         # Day 4 (Trigger: Amines)
         add_meal(d+3, 8, "Pineapple Bun & Milk Tea", ["Wheat Flour", "Butter", "Black Tea", "Milk"], {"Wheat Flour": ["Gliadin"], "Butter": ["Casein"], "Black Tea": ["Tannic Acid"]})
         add_meal(d+3, 13, "Char Siu Rice with Fried Egg", ["Pork", "Char Siu Sauce", "Egg", "Rice"], {"Pork": ["Tyramine"], "Char Siu Sauce": ["Monosodium Glutamate", "Salicylic Acid", "Tartrazine"], "Egg": ["Ovalbumin"]})
         add_meal(d+3, 16, "Shredded Dried Squid (Snack)", ["Squid", "Sugar", "Salt"], {"Squid": ["Tropomyosin", "Histamine", "Tyramine"]})
         add_meal(d+3, 19, "Pork Ribs with Black Bean Sauce", ["Pork Ribs", "Black Bean Sauce", "Rice"], {"Pork Ribs": ["Tyramine"], "Black Bean Sauce": ["Tyramine", "Monosodium Glutamate", "Putrescine"]})
         add_flare(d+3, 23, 8, ["Oozing", "Sleep disturbance", "Itching"], ["Arms", "Elbows", "Back"])
+        
         # Day 5 (Safe)
         add_meal(d+4, 8, "Boiled Eggs and Whole Wheat Toast", ["Egg", "Whole Wheat Bread"], {"Egg": ["Ovalbumin"], "Whole Wheat Bread": ["Gliadin", "Fructans"]})
         add_meal(d+4, 13, "Minced Pork with Preserved Egg", ["Pork", "Salted Duck Egg", "Rice"], {"Pork": ["Tyramine"], "Salted Duck Egg": ["Ovalbumin", "Tyramine"]})
         add_meal(d+4, 16, "Tofu Fa (Snack)", ["Soybeans", "Ginger"], {"Soybeans": ["Isoflavones"], "Ginger": ["Salicylic Acid", "Gingerol"]})
         add_meal(d+4, 19, "Stir-fried Beef with Broccoli", ["Beef", "Broccoli", "Garlic"], {"Beef": ["Tyramine"], "Broccoli": ["Salicylic Acid"], "Garlic": ["Fructans"]})
+        
         # Day 6 (Trigger: Shellfish & Spices)
         add_meal(d+5, 8, "Rice Noodle Roll (Cheong Fun)", ["Rice Flour", "Sweet Soy Sauce"], {"Sweet Soy Sauce": ["Tyramine", "Monosodium Glutamate", "Histamine", "Gliadin"]})
         add_meal(d+5, 13, "Spicy Crab with Garlic", ["Crab", "Garlic", "Chili"], {"Crab": ["Tropomyosin", "Arginine Kinase"], "Garlic": ["Fructans"], "Chili": ["Capsaicin"]})
         add_meal(d+5, 16, "Shrimp Crackers (Snack)", ["Shrimp Paste", "Tapioca Flour"], {"Shrimp Paste": ["Tropomyosin", "Monosodium Glutamate"]})
         add_meal(d+5, 19, "Tom Yum Goong", ["Shrimp", "Chili", "Lime", "Broth"], {"Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"], "Chili": ["Capsaicin"], "Lime": ["Citric Acid"]})
         add_flare(d+5, 23, 9, ["Cracking", "Pain", "Severe Redness", "Swelling"], ["Hands", "Fingers", "Eyelids"])
+        
         # Day 7 (Recovery)
         add_meal(d+6, 8, "Plain Congee with Youtiao", ["Rice", "Wheat Flour", "Oil"], {"Wheat Flour": ["Gliadin", "Glutenin"]})
         add_meal(d+6, 13, "Hainanese Chicken Rice", ["Chicken", "Rice", "Ginger Scallion Oil"], {"Chicken": ["Tyramine"], "Ginger Scallion Oil": ["Salicylic Acid", "Gingerol", "Allicin"]})

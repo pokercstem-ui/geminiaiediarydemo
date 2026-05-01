@@ -603,7 +603,7 @@ with tab4:
                     # Risk level label
                     if score >= 60:
                         level = "🔴 High Risk"
-                    elif score >= 40:
+                    elif score >= 50:
                         level = "🟠 Moderate Risk"
                     elif score >= 30:
                         level = "🟡 Low Risk"

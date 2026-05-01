@@ -3,12 +3,16 @@ import json
 import os
 from datetime import datetime
 import openai
+from PIL import Image
 
 # --- NEW: Import the presets from the separate file ---
 from presets import get_preset_logs
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="E-diary", page_icon="🧩")
+# Load the uploaded image for the app icon
+icon = Image.open("ed01.jpg")
+
+st.set_page_config(page_title="E-diary", page_icon=icon)
 st.markdown("# E-Diary")
 st.caption("Track meals, eczema flares, and trigger patterns in one clean place.")
 

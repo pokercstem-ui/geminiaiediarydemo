@@ -36,33 +36,9 @@ API_KEY = st.secrets.get("LLM7_API_KEY", "")
 if not API_KEY:
     st.warning("Add `LLM7_API_KEY` to `.streamlit/secrets.toml`.")
 
-# --- CACHE: CLIENT ---
-@st.cache_resource
-def get_client():
-    if not API_KEY:
-        return None
-    return openai.OpenAI(
-        base_url="https://api.llm7.io/v1",
-        api_key=API_KEY,
-    )
-
-# --- CACHE: LOAD DATA ---
-@st.cache_data(show_spinner=False)
-def load_logs():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_logs(logs):
-    with open(DATA_FILE, "w") as f:
-        json.dump(logs, f)
-    st.cache_data.clear()
-
 # --- AI PARSING ---
 def analyze_meal_with_ai(text):
-    client = get_client()
-    if client is None:
+    if not API_KEY:
         st.sidebar.error("API Key is missing!")
         return {"ingredients": [], "chemical_composition": {}}
 
@@ -76,23 +52,31 @@ def analyze_meal_with_ai(text):
     )
 
     try:
+        client = openai.OpenAI(
+            base_url="https://api.llm7.io/v1",
+            api_key=API_KEY,
+        )
+
         response = client.chat.completions.create(
             model="default",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
+            messages=[{"role": "user", "content": prompt}]
         )
+
         result_text = response.choices[0].message.content
         clean_text = result_text.replace("```json", "").replace("```", "").strip()
-
+        
         if clean_text.find('{') != -1:
             clean_text = clean_text[clean_text.find('{'):clean_text.rfind('}')+1]
 
         data = json.loads(clean_text)
+        
         return {
             "ingredients": data.get("ingredients", []),
             "chemical_composition": data.get("chemical_composition", {})
         }
+
     except Exception as e:
+        print(f"AI ERROR DETAILS: {str(e)}") 
         st.sidebar.error(f"AI Error: {str(e)}")
         return {"ingredients": [], "chemical_composition": {}}
 
@@ -109,113 +93,43 @@ def extract_chemicals_from_meal(meal):
                 chemicals.add(c.strip().title())
     return list(chemicals)
 
-# --- BAYESIAN ANALYSIS LOGIC ---
-def run_analysis(logs):
-    meals = [l for l in logs if l["type"] == "meal"]
-    flares = [l for l in logs if l["type"] == "flareup"]
-
-    if not meals:
-        return []
-
-    meal_records = []
-    global_hits = 0
-
-    for meal in meals:
-        m_time = datetime.fromisoformat(meal["timestamp"])
-        chemicals = extract_chemicals_from_meal(meal)
-
-        is_hit = False
-        flare_severity = 0
-
-        for f in flares:
-            f_time = datetime.fromisoformat(f["timestamp"])
-            delta = (f_time - m_time).total_seconds() / 3600.0
-            if 0 <= delta <= 48:
-                is_hit = True
-                flare_severity = max(flare_severity, f.get("severity", 5))
-
-        if is_hit:
-            global_hits += 1
-
-        meal_records.append({
-            "chemicals": chemicals,
-            "is_hit": is_hit,
-            "severity": flare_severity
-        })
-
-    global_rate = global_hits / len(meals) if meals else 0
-
-    chem_stats = {}
-    for mr in meal_records:
-        for c in mr["chemicals"]:
-            if c not in chem_stats:
-                chem_stats[c] = {"eats": 0, "hits": 0, "severity_sum": 0}
-            chem_stats[c]["eats"] += 1
-            if mr["is_hit"]:
-                chem_stats[c]["hits"] += 1
-                chem_stats[c]["severity_sum"] += mr["severity"]
-
-    SMOOTHING_WEIGHT = 3.0
-    results = []
-
-    for c, data in chem_stats.items():
-        eats = data["eats"]
-        hits = data["hits"]
-        smoothed_rate = (hits + (global_rate * SMOOTHING_WEIGHT)) / (eats + SMOOTHING_WEIGHT)
-        risk_multiplier = smoothed_rate / max(global_rate, 0.05)
-
-        if risk_multiplier > 1.1:
-            avg_sev = (data["severity_sum"] / hits) if hits > 0 else 0
-            sev_multiplier = 1.0 + (avg_sev / 20.0)
-            raw_score = (risk_multiplier - 1.0) * 35 * sev_multiplier
-            final_score = min(int(raw_score), 100)
-
-            if final_score > 5:
-                results.append({
-                    "component": c,
-                    "score": final_score,
-                    "occurrences": eats,
-                    "hit_rate": int((hits/eats)*100) if eats > 0 else 0
-                })
-
-    return sorted(results, key=lambda x: x["score"], reverse=True)
-
-# --- NEW: AI REVIEW HELPERS ---
+# --- NEW: AI REVIEW FUNCTIONS ---
 def build_evidence_summary(logs, scores, max_items=8):
+    """Compacts recent log data for AI review without overwhelming the model"""
     meals = [l for l in logs if l["type"] == "meal"][:max_items]
     flares = [l for l in logs if l["type"] == "flareup"][:max_items]
 
+    meal_summary = []
+    for m in meals:
+        meal_summary.append({
+            "content": m.get("content", ""),
+            "ingredients": m.get("ingredients", []),
+            "chemicals": extract_chemicals_from_meal(m),
+            "timestamp": m.get("timestamp", "")
+        })
+
+    flare_summary = []
+    for f in flares:
+        flare_summary.append({
+            "severity": f.get("severity", 0),
+            "symptoms": f.get("symptoms", []),
+            "affected_areas": f.get("affected_areas", []),
+            "timestamp": f.get("timestamp", "")
+        })
+
     return {
         "top_scores": scores[:5],
-        "recent_meals": [
-            {
-                "content": m.get("content", ""),
-                "ingredients": m.get("ingredients", []),
-                "chemicals": extract_chemicals_from_meal(m),
-                "timestamp": m.get("timestamp", "")
-            }
-            for m in meals
-        ],
-        "recent_flares": [
-            {
-                "severity": f.get("severity", 0),
-                "symptoms": f.get("symptoms", []),
-                "affected_areas": f.get("affected_areas", []),
-                "timestamp": f.get("timestamp", "")
-            }
-            for f in flares
-        ],
+        "recent_meals": meal_summary,
+        "recent_flares": flare_summary,
         "total_meals": len([l for l in logs if l["type"] == "meal"]),
         "total_flares": len([l for l in logs if l["type"] == "flareup"])
     }
 
-@st.cache_data(show_spinner=False)
-def ai_review_analysis_cached(logs_json, scores_json):
+def ai_review_analysis(logs, scores):
+    """Sends analysis results + log evidence to AI for second opinion"""
     if not API_KEY:
         return {"agreement": "unknown", "reason": "Missing API key.", "confidence": 0}
 
-    logs = json.loads(logs_json)
-    scores = json.loads(scores_json)
     evidence = build_evidence_summary(logs, scores)
 
     prompt = f"""
@@ -241,14 +155,17 @@ Evidence:
 """.strip()
 
     try:
-        client = get_client()
+        client = openai.OpenAI(
+            base_url="https://api.llm7.io/v1",
+            api_key=API_KEY,
+        )
         response = client.chat.completions.create(
             model="default",
             messages=[
-                {"role": "system", "content": "You are a cautious medical-pattern review assistant. Do not claim causation."},
+                {"role": "system", "content": "You are a cautious medical-pattern review assistant. Do not claim causation. Focus on whether the statistical pattern makes sense given the data."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.1
+            temperature=0.1  # Low temperature for consistent JSON
         )
 
         result_text = response.choices[0].message.content.strip()
@@ -271,9 +188,275 @@ Evidence:
             "notable_support": [],
             "notable_concerns": []
         }
+# --- END NEW: AI REVIEW FUNCTIONS ---
+
+# --- BAYESIAN ANALYSIS LOGIC ---
+def run_analysis(logs):
+    meals = [l for l in logs if l["type"] == "meal"]
+    flares = [l for l in logs if l["type"] == "flareup"]
+
+    if not meals:
+        return []
+
+    meal_records = []
+    global_hits = 0
+
+    # 1. Determine if each meal was a "Trigger Meal"
+    for meal in meals:
+        m_time = datetime.fromisoformat(meal["timestamp"])
+        chemicals = extract_chemicals_from_meal(meal)
+        
+        is_hit = False
+        flare_severity = 0
+        
+        # Check if a flare happened within 48 hours after this meal
+        for f in flares:
+            f_time = datetime.fromisoformat(f["timestamp"])
+            delta = (f_time - m_time).total_seconds() / 3600.0
+            if 0 <= delta <= 48:
+                is_hit = True
+                flare_severity = max(flare_severity, f.get("severity", 5))
+            
+        if is_hit:
+            global_hits += 1
+            
+        meal_records.append({
+            "chemicals": chemicals,
+            "is_hit": is_hit,
+            "severity": flare_severity
+        })
+
+    # Global Baseline: What % of ALL meals result in a flare?
+    global_rate = global_hits / len(meals) if meals else 0
+    
+    # 2. Tally individual chemicals
+    chem_stats = {}
+    for mr in meal_records:
+        for c in mr["chemicals"]:
+            if c not in chem_stats:
+                chem_stats[c] = {"eats": 0, "hits": 0, "severity_sum": 0}
+            chem_stats[c]["eats"] += 1
+            if mr["is_hit"]:
+                chem_stats[c]["hits"] += 1
+                chem_stats[c]["severity_sum"] += mr["severity"]
+
+    # 3. Apply Bayesian Smoothing
+    SMOOTHING_WEIGHT = 3.0 # Adds 3 'average' phantom meals to stop 100% jumps
+    results = []
+    
+    for c, data in chem_stats.items():
+        eats = data["eats"]
+        hits = data["hits"]
+        
+        # Pulls low-data items toward the global average
+        smoothed_rate = (hits + (global_rate * SMOOTHING_WEIGHT)) / (eats + SMOOTHING_WEIGHT)
+        
+        # Risk Multiplier: Is this chemical WORSE than your normal baseline?
+        # A multiplier of 1.0 means it's totally neutral/safe.
+        risk_multiplier = smoothed_rate / max(global_rate, 0.05) 
+        
+        if risk_multiplier > 1.1: # Only score it if it's at least 10% riskier than average
+            avg_sev = (data["severity_sum"] / hits) if hits > 0 else 0
+            sev_multiplier = 1.0 + (avg_sev / 20.0) # Boost if flares are severe
+            
+            # Map the multiplier to a 0-100 scale
+            raw_score = (risk_multiplier - 1.0) * 35 * sev_multiplier 
+            final_score = min(int(raw_score), 100)
+            
+            if final_score > 5:
+                results.append({
+                        "component": c, 
+                        "score": final_score, 
+                        "occurrences": eats,
+                        "hit_rate": int((hits/eats)*100) if eats > 0 else 0
+                    })
+                
+    return sorted(results, key=lambda x: x["score"], reverse=True)
+
 
 # --- LOAD DATA ---
 if "logs" not in st.session_state:
-    st.session_state.logs = load_logs()
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r") as f:
+            st.session_state.logs = json.load(f)
+    else:
+        st.session_state.logs = []
 
 logs = st.session_state.logs
+
+# --- SIDEBAR & TABS ---
+tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
+
+with tab1:
+    st.subheader("Log Activity")
+    left, right = st.columns(2)
+
+    with left:
+        with st.container(border=True):
+            st.markdown("### 🍎 Log a Meal")
+            with st.form("meal_form", clear_on_submit=True):
+                # NEW: Date/time picker for meal logging
+                col_date1, col_time1 = st.columns(2)
+                with col_date1:
+                    meal_date = st.date_input("Meal date", value=datetime.now().date())
+                with col_time1:
+                    meal_time = st.time_input("Meal time", value=datetime.now().time())
+                meal_datetime = datetime.combine(meal_date, meal_time)
+                
+                meal_txt = st.text_input("What did you eat?", placeholder="e.g. French fries and spicy dipping sauce")
+                save_meal = st.form_submit_button("Save Meal")
+                
+                if save_meal and meal_txt:
+                    with st.spinner("AI is extracting chemical composition..."):
+                        analysis_data = analyze_meal_with_ai(meal_txt)
+                        
+                    st.session_state.logs.insert(0, {
+                            "type": "meal",
+                            "content": meal_txt,
+                            "ingredients": analysis_data["ingredients"],
+                            "chemical_composition": analysis_data["chemical_composition"],
+                            "timestamp": meal_datetime.isoformat()  # MODIFIED: Uses selected datetime
+                        })
+                    with open(DATA_FILE, "w") as f:
+                        json.dump(st.session_state.logs, f)
+                    st.success(f"Meal logged at {meal_datetime.strftime('%Y-%m-%d %H:%M')}!")
+                    st.rerun()
+
+    with right:
+        with st.container(border=True):
+            st.markdown("### 🚨 Log a Flare-up")
+            with st.form("flare_form", clear_on_submit=True):
+                # NEW: Date/time picker for flare logging  
+                col_date2, col_time2 = st.columns(2)
+                with col_date2:
+                    flare_date = st.date_input("Flare date", value=datetime.now().date())
+                with col_time2:
+                    flare_time = st.time_input("Flare time", value=datetime.now().time())
+                flare_datetime = datetime.combine(flare_date, flare_time)
+                
+                sev = st.slider("Overall severity", 1, 10, 5)
+                symptoms = st.multiselect("What symptoms did you have?", SYMPTOM_OPTIONS)
+                affected_areas = st.multiselect("What areas were affected?", AFFECTED_AREA_OPTIONS)
+                save_flare = st.form_submit_button("Save Flare-up")
+
+                if save_flare:
+                    st.session_state.logs.insert(0, {
+                        "type": "flareup",
+                        "severity": sev,
+                        "symptoms": symptoms,
+                        "affected_areas": affected_areas,
+                        "timestamp": flare_datetime.isoformat()  # MODIFIED: Uses selected datetime
+                    })
+                    with open(DATA_FILE, "w") as f:
+                        json.dump(st.session_state.logs, f)
+                    st.success(f"Flare-up logged at {flare_datetime.strftime('%Y-%m-%d %H:%M')}.")
+                    st.rerun()
+with tab2:
+    st.subheader("History")
+    if st.button("🗑️ Clear All History"):
+        st.session_state.logs = []
+        if os.path.exists(DATA_FILE):
+            os.remove(DATA_FILE)
+        st.rerun()
+
+    for l in logs:
+        t = datetime.fromisoformat(l["timestamp"]).strftime("%b %d, %H:%M")
+        
+        if l["type"] == "meal":
+            ingredients = l.get("ingredients", [])
+            chem_comp = l.get("chemical_composition", {})
+            
+            st.info(f"🍴 **{l['content']}** \n*{t}*")
+            
+            if ingredients or chem_comp:
+                with st.expander("View Breakdown"):
+                    for ing in ingredients:
+                        chems = chem_comp.get(ing, [])
+                        composition = ", ".join(chems) if isinstance(chems, list) else chems
+                        st.markdown(f"- **{ing}**: {composition}")
+                        
+        else:
+            symptoms = ", ".join(l.get("symptoms", [])) or "Not specified"
+            areas = ", ".join(l.get("affected_areas", [])) or "Not specified"
+
+            st.error(
+                f"🚨 **Flare-up**: Severity {l.get('severity', 0)}  \n"
+                f"**Symptoms:** {symptoms}  \n"
+                f"**Affected areas:** {areas}  \n"
+                f"*{t}*"
+            )
+
+with tab3:
+    ### MODIFIED: Now includes AI review of mathematical analysis ###
+    st.subheader("Analysis")
+    scores = run_analysis(logs)
+
+    if not scores:
+        st.write("Keep logging! Patterns appear once you have enough meals and safe days recorded.")
+    else:
+        st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline.")
+        for s in scores:
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**{s['component']}** *(Eaten {s['occurrences']} times | Triggered flare {s['hit_rate']}% of the time)*")
+                st.progress(s["score"] / 100)
+            with col2:
+                st.metric("Score", f"{s['score']}/100")
+
+        ### NEW: AI Review Section - Placed behind a button to prevent slow initialization ###
+        st.divider()
+        st.subheader("🤖 AI Review")
+        
+        # FIX: The button prevents the API from firing on every page reload
+        if st.button("Generate AI Review"):
+            with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
+                ai_review = ai_review_analysis(logs, scores)
+
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.metric("AI Agreement", ai_review['agreement'].title())
+                st.metric("AI Confidence", f"{ai_review['confidence']}%")
+            with col2:
+                st.write(f"**Reason:**\n{ai_review['reason']}")
+
+            if ai_review.get("notable_support"):
+                st.success("**Supporting evidence:**")
+                for item in ai_review["notable_support"]:
+                    st.write(f"• {item}")
+
+            if ai_review.get("notable_concerns"):
+                st.warning("**Areas of uncertainty:**")
+                for item in ai_review["notable_concerns"]:
+                    st.write(f"• {item}")
+        ### END NEW: AI Review Section ###
+
+with tab4:
+    st.subheader("Risk Forecast")
+    st.write("Predict potential triggers before you eat.")
+
+    with st.form("predict_form"):
+        predict_txt = st.text_input("Enter a meal to check:")
+        check_btn = st.form_submit_button("Check Pattern Risk")
+
+    if check_btn and predict_txt:
+        with st.spinner("Checking your history..."):
+            analysis_data = analyze_meal_with_ai(predict_txt)
+            comps = extract_chemicals_from_meal(analysis_data)
+            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
+
+            if not comps:
+                st.warning("No tracked chemicals found in that meal.")
+            else:
+                max_risk = 0
+                for c in comps:
+                    score = analysis_scores.get(c, 0)
+                    max_risk = max(max_risk, score)
+                    st.write(f"Found `{c}`: Risk Score {score}/100")
+
+                st.divider()
+                if max_risk > 70:
+                    st.error("### High Risk Detected\nYour history suggests this meal contains chemicals that frequently correlate with your flare-ups.")
+                elif max_risk > 40:
+                    st.warning("### Caution\nThere is a moderate historical correlation with your flare-ups.")
+                else:
+                    st.success("### Likely Low Risk\nNo strong patterns found for these chemical constituents.")

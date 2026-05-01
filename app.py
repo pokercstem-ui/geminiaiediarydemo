@@ -16,12 +16,42 @@ except FileNotFoundError:
     icon = "🧩" # Fallback if image isn't found during testing
 
 st.set_page_config(page_title="E-diary", page_icon=icon)
-st.markdown("# E-Diary")
-st.caption("Track meals, eczema flares, and trigger patterns in one clean place.")
 
 st.markdown(
     """
     <style>
+    /* Prevent content from hiding behind the bottom nav bar */
+    .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 100px !important; 
+    }
+    
+    /* Move tab container to the bottom */
+    div[data-testid="stTabs"] > [role="tablist"] {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: var(--secondary-background-color);
+        z-index: 99999;
+        display: flex;
+        border-top: 1px solid rgba(128,128,128,0.2);
+        padding-bottom: env(safe-area-inset-bottom, 15px); /* safe area for mobile */
+    }
+
+    /* Divide into 4 equal buttons */
+    div[data-testid="stTabs"] > [role="tablist"] > button {
+        flex: 1;
+        justify-content: center;
+        padding: 1rem 0;
+    }
+
+    /* Move the active highlight indicator to the top of the tab instead of the bottom */
+    div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+        top: 0;
+        bottom: auto;
+    }
+
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
     /* Made buttons standard alignment so the 🔍 centers nicely */
@@ -396,7 +426,7 @@ logs = st.session_state.logs
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 
 with tab1:
-    st.subheader("Log Activity")
+    st.markdown("# 📝 Log Activity")
     left, right = st.columns(2)
 
     with left:
@@ -471,16 +501,14 @@ with tab1:
                     st.rerun()
 
 with tab2:
-    col_title, col_btn = st.columns([0.7, 0.3], vertical_alignment="center")
-    with col_title:
-        st.subheader("History")
-    with col_btn:
-        if st.button("🗑️ Clear History", use_container_width=True):
-            st.session_state.logs = []
-            with open(DATA_FILE, "w") as f:
-                json.dump([], f)
-            st.cache_data.clear()
-            st.rerun()
+    st.markdown("# 📋 History")
+    if st.button("🗑️ Clear History", use_container_width=True):
+        st.session_state.logs = []
+        with open(DATA_FILE, "w") as f:
+            json.dump([], f)
+        st.cache_data.clear()
+        st.rerun()
+    st.write("")
 
     for l in logs:
         t = datetime.fromisoformat(l["timestamp"]).strftime("%b %d, %H:%M")
@@ -519,7 +547,7 @@ with tab2:
             """, unsafe_allow_html=True)
 
 with tab3:
-    st.subheader("Analysis")
+    st.markdown("# 📊 Analysis")
     
     # Check data maturity
     total_days = len(set([l["timestamp"][:10] for l in logs]))
@@ -616,7 +644,7 @@ with tab3:
                     st.markdown(f"<div style='font-size: 0.9rem; opacity: 0.8; margin-left: 16px;'>• {item}</div>", unsafe_allow_html=True)
 
 with tab4:
-    st.subheader("🔮 Risk Forecast")
+    st.markdown("# 🔮 Risk Forecast")
     st.markdown("**Check your meal before eating**")
 
     with st.form("predict_form"):

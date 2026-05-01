@@ -546,15 +546,16 @@ with tab3:
                     st.write(f"• {item}")
 
 with tab4:
-    st.subheader("Risk Forecast")
-    st.write("Predict potential triggers before you eat.")
+    st.subheader("🔮 Risk Forecast")
+    st.write("Predict potential triggers **before** you eat. Now more sensitive to early patterns.")
 
     with st.form("predict_form"):
-        predict_txt = st.text_input("Enter a meal to check:")
-        check_btn = st.form_submit_button("Check Pattern Risk")
+        predict_txt = st.text_input("Enter a meal to check:", 
+                                   placeholder="e.g. Tomato pasta with cheese and basil")
+        check_btn = st.form_submit_button("🔍 Check Pattern Risk")
 
     if check_btn and predict_txt:
-        with st.spinner("Checking your history..."):
+        with st.spinner("Analyzing meal against your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
             comps = extract_chemicals_from_meal(analysis_data)
             analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
@@ -562,16 +563,59 @@ with tab4:
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
+                st.success(f"**Extracted {len(comps)} chemical components** from your meal.")
+
                 max_risk = 0
+                risk_details = []
+
                 for c in comps:
                     score = analysis_scores.get(c, 0)
                     max_risk = max(max_risk, score)
-                    st.write(f"Found `{c}`: Risk Score {score}/100")
+                    
+                    if score > 0:
+                        risk_details.append((c, score))
+
+                # === MORE SENSITIVE RISK CLASSIFICATION ===
+                if max_risk >= 50:
+                    st.error("### ⚠️ HIGH RISK\nThis meal contains chemicals with strong historical correlation to your flares.")
+                elif max_risk >= 25:
+                    st.warning("### ⚡ Moderate Risk\nSome components have shown elevated risk in your data.")
+                elif max_risk >= 10:
+                    st.info("### Low but Notable Risk\nMinor patterns detected. Worth monitoring.")
+                else:
+                    st.success("### Likely Safe\nNo significant risk patterns found in your history for this meal.")
 
                 st.divider()
-                if max_risk > 70:
-                    st.error("### High Risk Detected\nYour history suggests this meal contains chemicals that frequently correlate with your flare-ups.")
-                elif max_risk > 40:
-                    st.warning("### Caution\nThere is a moderate historical correlation with your flare-ups.")
+
+                # Detailed breakdown
+                if risk_details:
+                    st.subheader("Chemical Risk Breakdown")
+                    for chem, score in sorted(risk_details, key=lambda x: x[1], reverse=True):
+                        if score >= 50:
+                            emoji = "🔴"
+                            level = "High"
+                        elif score >= 25:
+                            emoji = "🟠"
+                            level = "Moderate"
+                        elif score >= 10:
+                            emoji = "🟡"
+                            level = "Low"
+                        else:
+                            emoji = "🟢"
+                            level = "Minimal"
+
+                        st.markdown(f"""
+                        **{emoji} {chem}** — **{score}/100** ({level} risk)
+                        """)
+                        st.progress(score / 100)
                 else:
-                    st.success("### Likely Low Risk\nNo strong patterns found for these chemical constituents.")
+                    st.info("None of the detected chemicals have enough data yet to show risk.")
+
+                # Overall recommendation
+                st.divider()
+                if max_risk >= 40:
+                    st.markdown("**Recommendation:** Consider avoiding or testing this meal on a low-flare day with caution.")
+                elif max_risk >= 15:
+                    st.markdown("**Recommendation:** Monitor closely if you eat this. Log any symptoms within 48 hours.")
+                else:
+                    st.markdown("**Recommendation:** Should be relatively safe based on current patterns.")

@@ -1,100 +1,330 @@
 from datetime import datetime, timedelta
 
 def get_preset_logs():
-    """Generates realistic HK diet preset logs with dynamic timestamps and granular chemical profiles."""
+    """Generates 1 week of granular HK diet preset logs (4 meals/day + flares)."""
     now = datetime.now()
     return [
+        # --- DAY 1 (Most Recent) ---
+        {
+            "type": "meal",
+            "content": "Steamed Minced Pork with Preserved Egg and White Rice",
+            "ingredients": ["Pork", "Salted Duck Egg", "White Rice"],
+            "chemical_composition": {
+                "Pork": ["Tyramine"],
+                "Salted Duck Egg": ["Ovalbumin", "Tyramine", "Hydrogen Sulfide"]
+            },
+            "timestamp": (now - timedelta(hours=8)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Fuji Apple (Snack)",
+            "ingredients": ["Apple"],
+            "chemical_composition": {
+                "Apple": ["Salicylic Acid", "Fructose", "Mal d 1"]
+            },
+            "timestamp": (now - timedelta(hours=12)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Vegetarian Fried Rice with Choy Sum",
+            "ingredients": ["Rice", "Choy Sum", "Egg", "Vegetable Oil"],
+            "chemical_composition": {
+                "Choy Sum": ["Salicylic Acid", "Glucosinolates"],
+                "Egg": ["Ovalbumin", "Ovomucoid"]
+            },
+            "timestamp": (now - timedelta(hours=15)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Plain Congee with Youtiao (Fried Dough)",
+            "ingredients": ["Rice", "Wheat Flour", "Oil"],
+            "chemical_composition": {
+                "Wheat Flour": ["Gliadin", "Glutenin"]
+            },
+            "timestamp": (now - timedelta(hours=20)).isoformat()
+        },
+
+        # --- DAY 2 (Trigger Day) ---
         {
             "type": "flareup",
-            "severity": 7,
-            "symptoms": ["Itching", "Redness", "Swelling"],
-            "affected_areas": ["Face", "Neck", "Arms"],
-            "timestamp": (now - timedelta(days=1, hours=2)).isoformat()
+            "severity": 6,
+            "symptoms": ["Redness", "Itching"],
+            "affected_areas": ["Neck", "Arms"],
+            "timestamp": (now - timedelta(hours=26)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Shrimp Wonton Noodle Soup and a side of Gai Lan with Oyster Sauce",
-            "ingredients": ["Shrimp", "Pork", "Wheat Noodles", "Gai Lan", "Oyster Sauce", "Broth"],
+            "content": "Sichuan Hot Pot (Beef, Fish Balls, Enoki, Sa Cha Sauce)",
+            "ingredients": ["Beef", "Fish Paste", "Enoki Mushroom", "Sa Cha Sauce", "Broth"],
             "chemical_composition": {
-                "Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"],
-                "Wheat Noodles": ["Gliadin", "Glutenin", "Fructans"],
-                "Oyster Sauce": ["Monosodium Glutamate", "Tropomyosin", "Tyramine", "Sodium Benzoate"],
-                "Pork": ["Tyramine"]
+                "Beef": ["Histamine", "Tyramine"],
+                "Fish Paste": ["Parvalbumin", "Histamine"],
+                "Sa Cha Sauce": ["Tropomyosin", "Monosodium Glutamate", "Histamine", "Capsaicin"]
             },
-            "timestamp": (now - timedelta(days=1, hours=14)).isoformat()
+            "timestamp": (now - timedelta(hours=32)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Macaroni in Soup with Spam, Fried Egg, and Hot Milk Tea",
-            "ingredients": ["Macaroni", "Spam", "Egg", "Black Tea", "Evaporated Milk", "Chicken Broth"],
+            "content": "Bubble Tea with Tapioca Pearls (Snack)",
+            "ingredients": ["Black Tea", "Milk", "Tapioca", "Sugar"],
             "chemical_composition": {
+                "Black Tea": ["Tannic Acid", "Histamine"],
+                "Milk": ["Casein", "Beta-lactoglobulin", "Lactose"]
+            },
+            "timestamp": (now - timedelta(hours=36)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Sushi Lunch Set (Salmon, Tuna, Soy Sauce)",
+            "ingredients": ["Salmon", "Tuna", "Rice", "Soy Sauce", "Wasabi"],
+            "chemical_composition": {
+                "Salmon": ["Histamine", "Parvalbumin"],
+                "Tuna": ["Histamine", "Parvalbumin"],
+                "Soy Sauce": ["Tyramine", "Monosodium Glutamate", "Histamine", "Gliadin"]
+            },
+            "timestamp": (now - timedelta(hours=39)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Satay Beef Macaroni in Soup",
+            "ingredients": ["Beef", "Macaroni", "Satay Sauce", "Broth"],
+            "chemical_composition": {
+                "Beef": ["Histamine"],
                 "Macaroni": ["Gliadin", "Glutenin"],
-                "Spam": ["Sodium Nitrite", "Tyramine", "Histamine"],
-                "Egg": ["Ovalbumin", "Ovomucoid", "Lysozyme"],
-                "Black Tea": ["Tannic Acid", "Theaflavins", "Histamine"],
-                "Evaporated Milk": ["Lactose", "Casein", "Beta-lactoglobulin"]
+                "Satay Sauce": ["Ara h 1", "Ara h 2", "Histamine", "Capsaicin"]
             },
-            "timestamp": (now - timedelta(days=2, hours=4)).isoformat()
+            "timestamp": (now - timedelta(hours=44)).isoformat()
+        },
+
+        # --- DAY 3 (Safe Day) ---
+        {
+            "type": "meal",
+            "content": "Pan-fried Salmon with Asparagus",
+            "ingredients": ["Salmon", "Asparagus", "Olive Oil"],
+            "chemical_composition": {
+                "Salmon": ["Parvalbumin"],
+                "Asparagus": ["Asparagine", "Fructans"]
+            },
+            "timestamp": (now - timedelta(hours=56)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Plain Century Egg and Lean Pork Congee",
-            "ingredients": ["Rice", "Century Egg", "Pork"],
+            "content": "Fresh Mango (Snack)",
+            "ingredients": ["Mango"],
             "chemical_composition": {
-                "Century Egg": ["Tyramine", "Putrescine", "Hydrogen Sulfide", "Ammonia"],
-                "Pork": ["Tyramine"]
+                "Mango": ["Urushiol-related compounds", "Fructose"]
             },
-            "timestamp": (now - timedelta(days=2, hours=12)).isoformat()
+            "timestamp": (now - timedelta(hours=60)).isoformat()
         },
+        {
+            "type": "meal",
+            "content": "Steamed Chicken with Shiitake Mushrooms and Rice",
+            "ingredients": ["Chicken", "Shiitake Mushroom", "White Rice", "Soy Sauce"],
+            "chemical_composition": {
+                "Chicken": ["Tyramine"],
+                "Shiitake Mushroom": ["Lentinan", "Guanylic Acid", "Monosodium Glutamate"],
+                "Soy Sauce": ["Tyramine", "Monosodium Glutamate"]
+            },
+            "timestamp": (now - timedelta(hours=63)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Boiled Eggs and Whole Wheat Toast",
+            "ingredients": ["Egg", "Whole Wheat Bread"],
+            "chemical_composition": {
+                "Egg": ["Ovalbumin", "Ovomucoid"],
+                "Whole Wheat Bread": ["Gliadin", "Glutenin", "Fructans"]
+            },
+            "timestamp": (now - timedelta(hours=68)).isoformat()
+        },
+
+        # --- DAY 4 (Heavy Trigger Day) ---
         {
             "type": "flareup",
             "severity": 8,
-            "symptoms": ["Itching", "Oozing", "Sleep disturbance"],
-            "affected_areas": ["Face", "Elbows"],
-            "timestamp": (now - timedelta(days=3, hours=5)).isoformat()
+            "symptoms": ["Oozing", "Swelling", "Sleep disturbance"],
+            "affected_areas": ["Face", "Eyelids", "Hands"],
+            "timestamp": (now - timedelta(hours=74)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Dim Sum: Har Gow (Shrimp Dumplings), Siu Mai, and Pu'er Tea",
-            "ingredients": ["Shrimp", "Pork", "Wheat Wrapper", "Pu'er Tea"],
+            "content": "Baked Pork Chop Rice with Tomato Sauce",
+            "ingredients": ["Pork Chop", "Tomato", "Cheese", "Rice"],
+            "chemical_composition": {
+                "Pork Chop": ["Tyramine"],
+                "Tomato": ["Tomatine", "Solanine", "Histamine", "Salicylic Acid"],
+                "Cheese": ["Casein", "Tyramine", "Histamine"]
+            },
+            "timestamp": (now - timedelta(hours=80)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Shrimp Crackers (Snack)",
+            "ingredients": ["Shrimp Paste", "Tapioca Flour", "Palm Oil"],
+            "chemical_composition": {
+                "Shrimp Paste": ["Tropomyosin", "Arginine Kinase", "Monosodium Glutamate"]
+            },
+            "timestamp": (now - timedelta(hours=84)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Tom Yum Goong (Thai Shrimp Soup) with Rice",
+            "ingredients": ["Shrimp", "Lemongrass", "Chili", "Lime", "Broth"],
             "chemical_composition": {
                 "Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"],
-                "Wheat Wrapper": ["Gliadin", "Glutenin"],
-                "Pork": ["Tyramine", "Putrescine"],
-                "Pu'er Tea": ["Tannic Acid", "Histamine", "Theaflavins"]
+                "Chili": ["Capsaicin", "Salicylic Acid"],
+                "Lime": ["Citric Acid", "Histamine liberators"]
             },
-            "timestamp": (now - timedelta(days=4, hours=1)).isoformat()
+            "timestamp": (now - timedelta(hours=87)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Steamed Grass Carp with Ginger and Soy Sauce, White Rice",
-            "ingredients": ["Grass Carp", "Ginger", "Soy Sauce", "White Rice"],
+            "content": "Shrimp Wonton Noodle Soup",
+            "ingredients": ["Shrimp", "Pork", "Wheat Noodles", "Broth"],
             "chemical_composition": {
-                "Soy Sauce": ["Tyramine", "Monosodium Glutamate", "Histamine", "Gliadin"],
+                "Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"],
+                "Wheat Noodles": ["Gliadin", "Glutenin"],
+                "Pork": ["Tyramine"]
+            },
+            "timestamp": (now - timedelta(hours=92)).isoformat()
+        },
+
+        # --- DAY 5 (Recovery Day) ---
+        {
+            "type": "meal",
+            "content": "Stir-fried Beef with Choy Sum",
+            "ingredients": ["Beef", "Choy Sum", "Garlic", "Oil"],
+            "chemical_composition": {
+                "Beef": ["Tyramine"],
+                "Choy Sum": ["Salicylic Acid", "Glucosinolates"],
+                "Garlic": ["Allicin", "Fructans"]
+            },
+            "timestamp": (now - timedelta(hours=104)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Tofu Fa (Silken Tofu) with Ginger Syrup (Snack)",
+            "ingredients": ["Soybeans", "Ginger", "Sugar"],
+            "chemical_composition": {
+                "Soybeans": ["Phytic Acid", "Isoflavones"],
                 "Ginger": ["Salicylic Acid", "Gingerol"]
             },
-            "timestamp": (now - timedelta(days=4, hours=8)).isoformat()
+            "timestamp": (now - timedelta(hours=108)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Char Siu (BBQ Pork) Rice with Fried Egg",
-            "ingredients": ["Pork", "Char Siu Sauce", "Egg", "White Rice"],
+            "content": "Sliced Grass Carp Fish Congee",
+            "ingredients": ["Grass Carp", "Rice", "Ginger"],
             "chemical_composition": {
-                "Pork": ["Tyramine"],
-                "Char Siu Sauce": ["Monosodium Glutamate", "Salicylic Acid", "Tyramine", "Tartrazine"],
-                "Egg": ["Ovalbumin", "Ovomucoid"]
+                "Grass Carp": ["Parvalbumin"],
+                "Ginger": ["Salicylic Acid", "Gingerol"]
             },
-            "timestamp": (now - timedelta(days=5, hours=6)).isoformat()
+            "timestamp": (now - timedelta(hours=111)).isoformat()
         },
         {
             "type": "meal",
-            "content": "Steamed Chicken with Sand Ginger, Choy Sum, and Rice",
-            "ingredients": ["Chicken", "Sand Ginger", "Choy Sum", "White Rice"],
+            "content": "Oatmeal with Soy Milk",
+            "ingredients": ["Rolled Oats", "Soy Milk"],
+            "chemical_composition": {
+                "Rolled Oats": ["Avenin", "Phytic Acid"],
+                "Soy Milk": ["Phytic Acid", "Isoflavones"]
+            },
+            "timestamp": (now - timedelta(hours=116)).isoformat()
+        },
+
+        # --- DAY 6 (Trigger Day) ---
+        {
+            "type": "flareup",
+            "severity": 7,
+            "symptoms": ["Dryness", "Cracking", "Pain"],
+            "affected_areas": ["Hands", "Fingers"],
+            "timestamp": (now - timedelta(hours=122)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Spicy Crab with Garlic and Chili (Typhoon Shelter Style)",
+            "ingredients": ["Crab", "Garlic", "Chili", "Black Bean"],
+            "chemical_composition": {
+                "Crab": ["Tropomyosin", "Arginine Kinase"],
+                "Garlic": ["Allicin", "Fructans"],
+                "Chili": ["Capsaicin"],
+                "Black Bean": ["Tyramine", "Putrescine"]
+            },
+            "timestamp": (now - timedelta(hours=128)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Shredded Dried Squid (Snack)",
+            "ingredients": ["Squid", "Sugar", "Salt"],
+            "chemical_composition": {
+                "Squid": ["Tropomyosin", "Histamine", "Tyramine"]
+            },
+            "timestamp": (now - timedelta(hours=132)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Curry Beef Brisket with Rice",
+            "ingredients": ["Beef Brisket", "Curry Powder", "Potato", "Rice"],
+            "chemical_composition": {
+                "Beef Brisket": ["Histamine", "Tyramine"],
+                "Curry Powder": ["Salicylic Acid", "Curcumin", "Capsaicin"],
+                "Potato": ["Solanine"]
+            },
+            "timestamp": (now - timedelta(hours=135)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Pineapple Bun with Butter (Bolo Bao) and Milk Tea",
+            "ingredients": ["Wheat Flour", "Butter", "Black Tea", "Evaporated Milk"],
+            "chemical_composition": {
+                "Wheat Flour": ["Gliadin", "Glutenin"],
+                "Butter": ["Casein", "Lactose"],
+                "Black Tea": ["Tannic Acid", "Histamine"],
+                "Evaporated Milk": ["Casein", "Beta-lactoglobulin"]
+            },
+            "timestamp": (now - timedelta(hours=140)).isoformat()
+        },
+
+        # --- DAY 7 (Oldest - Safe Day) ---
+        {
+            "type": "meal",
+            "content": "Steamed Pork Ribs with Black Bean Sauce, Rice",
+            "ingredients": ["Pork Ribs", "Black Bean Sauce", "Rice"],
+            "chemical_composition": {
+                "Pork Ribs": ["Tyramine"],
+                "Black Bean Sauce": ["Tyramine", "Monosodium Glutamate", "Putrescine"]
+            },
+            "timestamp": (now - timedelta(hours=152)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Hong Kong Style Egg Tart (Snack)",
+            "ingredients": ["Egg", "Wheat Flour", "Butter", "Sugar"],
+            "chemical_composition": {
+                "Egg": ["Ovalbumin", "Ovomucoid"],
+                "Wheat Flour": ["Gliadin", "Glutenin"],
+                "Butter": ["Casein"]
+            },
+            "timestamp": (now - timedelta(hours=156)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Hainanese Chicken Rice",
+            "ingredients": ["Chicken", "Rice", "Chicken Fat", "Ginger Scallion Oil"],
             "chemical_composition": {
                 "Chicken": ["Tyramine"],
-                "Sand Ginger": ["Salicylic Acid", "Kaempferol"],
-                "Choy Sum": ["Salicylic Acid", "Glucosinolates"]
+                "Ginger Scallion Oil": ["Salicylic Acid", "Gingerol", "Allicin"]
             },
-            "timestamp": (now - timedelta(days=6, hours=7)).isoformat()
+            "timestamp": (now - timedelta(hours=159)).isoformat()
+        },
+        {
+            "type": "meal",
+            "content": "Rice Noodle Roll (Cheong Fun) with Sweet Soy Sauce",
+            "ingredients": ["Rice Flour", "Sweet Soy Sauce", "Sesame Seeds"],
+            "chemical_composition": {
+                "Sweet Soy Sauce": ["Tyramine", "Histamine", "Monosodium Glutamate", "Gliadin"],
+                "Sesame Seeds": ["Ses i 1", "Phytic Acid"]
+            },
+            "timestamp": (now - timedelta(hours=164)).isoformat()
         }
     ]

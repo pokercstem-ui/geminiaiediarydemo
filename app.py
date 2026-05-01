@@ -591,7 +591,7 @@ with tab4:
                     color = "#FF9500"
                     status = "MODERATE RISK"
                 elif final_risk >= 20:
-                    color = "#FFCC00"
+                    color = "#F5AD27"
                     status = "LOW RISK"
                 else:
                     color = "#34C759"

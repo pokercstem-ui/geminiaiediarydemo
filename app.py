@@ -8,7 +8,7 @@ import openai
 from presets import get_preset_logs
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="GutPattern", page_icon="🧩")
+st.set_page_config(page_title="E-diary", page_icon="🧩")
 st.markdown("# E-Diary")
 st.caption("Track meals, eczema flares, and trigger patterns in one clean place.")
 

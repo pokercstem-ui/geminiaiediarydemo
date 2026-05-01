@@ -26,35 +26,40 @@ st.markdown(
         padding-bottom: 100px !important; 
     }
     
-    /* Move tab container to the bottom */
-    div[data-testid="stTabs"] > [role="tablist"] {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: var(--secondary-background-color);
-        z-index: 99999;
-        display: flex;
-        border-top: 1px solid rgba(128,128,128,0.2);
-        padding-bottom: env(safe-area-inset-bottom, 15px); /* safe area for mobile */
+    /* Target the exact wrapper holding the tab buttons and pin it to the bottom */
+    div[data-testid="stTabs"] > div:first-child {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background-color: var(--background-color, #ffffff) !important;
+        z-index: 99999 !important;
+        border-top: 1px solid rgba(128,128,128,0.2) !important;
+        padding-bottom: env(safe-area-inset-bottom, 15px) !important;
+    }
+
+    /* Force the tablist to stretch full width */
+    div[data-testid="stTabs"] [role="tablist"] {
+        display: flex !important;
+        width: 100% !important;
+        justify-content: space-around !important;
     }
 
     /* Divide into 4 equal buttons */
-    div[data-testid="stTabs"] > [role="tablist"] > button {
-        flex: 1;
-        justify-content: center;
-        padding: 1rem 0;
+    div[data-testid="stTabs"] [role="tablist"] > button {
+        flex: 1 !important;
+        justify-content: center !important;
+        padding: 1rem 0 !important;
     }
 
     /* Move the active highlight indicator to the top of the tab instead of the bottom */
     div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-        top: 0;
-        bottom: auto;
+        top: 0 !important;
+        bottom: auto !important;
     }
 
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
-    /* Made buttons standard alignment so the 🔍 centers nicely */
     .stButton>button {padding: 0.2rem 0.5rem;} 
     </style>
     """,
@@ -80,7 +85,6 @@ if not API_KEY:
 
 @st.cache_resource
 def get_ai_client():
-    """Caches the AI client so it doesn't re-initialize on every rerun."""
     if not API_KEY:
         return None
     return openai.OpenAI(base_url="https://api.llm7.io/v1", api_key=API_KEY)
@@ -90,11 +94,8 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    """Loads data and ensures presets are included only once."""
-    # Always grab the presets first
     presets = get_preset_logs()
     
-    # Try to load existing user data
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
@@ -104,21 +105,16 @@ def load_data(filepath):
     else:
         existing_logs = []
 
-    # Use timestamp as unique key to prevent duplicates
     log_dict = {}
 
-    # First add presets (with lower priority)
     for log in presets:
         log_dict[log["timestamp"]] = log
 
-    # Then add user logs (they will overwrite presets if timestamp matches)
     for log in existing_logs:
         log_dict[log["timestamp"]] = log
 
-    # Convert back to list and sort by timestamp (newest first)
     final_logs = sorted(list(log_dict.values()), key=lambda x: x["timestamp"], reverse=True)
 
-    # Save cleaned data back to file
     with open(filepath, "w") as f:
         json.dump(final_logs, f, indent=2)
 
@@ -127,7 +123,6 @@ def load_data(filepath):
 # --- AI PARSING & INFO ---
 @st.cache_data(show_spinner=False)
 def analyze_meal_with_ai(text):
-    """Caches meal analysis so identical meals process instantly."""
     if not client:
         st.sidebar.error("API Key is missing!")
         return {"ingredients": [], "chemical_composition": {}}
@@ -176,7 +171,6 @@ def analyze_meal_with_ai(text):
 
 @st.cache_data(show_spinner=False)
 def get_chemical_info_from_ai(chemical_name):
-    """Fetches descriptive information about a specific chemical component."""
     if not client:
         return "API Key missing. Cannot fetch details."
         
@@ -228,25 +222,21 @@ def show_chemical_profile(chemical_name, occurrences, hit_rate, score):
 
 # --- AI REVIEW FUNCTIONS ---
 def build_evidence_summary(logs, scores, max_items=8):
-    # Get the top chemical triggers to actively look for in the history
     top_chemicals = [s["component"] for s in scores[:3]]
     
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
 
-    # Prioritize meals that contain the top suspected triggers
     relevant_meals = []
     for m in meals:
         m_chems = extract_chemicals_from_meal(m)
         if any(c in m_chems for c in top_chemicals):
             relevant_meals.append(m)
             
-    # If we don't have enough relevant meals, pad with recent ones
     if len(relevant_meals) < max_items:
         remaining_meals = [m for m in meals if m not in relevant_meals]
         relevant_meals.extend(remaining_meals[:max_items - len(relevant_meals)])
     
-    # Trim to max_items
     relevant_meals = relevant_meals[:max_items]
 
     meal_summary = []
@@ -283,7 +273,6 @@ def build_evidence_summary(logs, scores, max_items=8):
 
 @st.cache_data(show_spinner=False)
 def ai_review_analysis(logs, scores):
-    """Caches the AI review so it doesn't re-run unless the logs/scores change."""
     if not client:
         return {"agreement": "unknown", "reason": "Missing API key.", "confidence": 0}
 
@@ -417,7 +406,6 @@ def run_analysis(logs):
 if "logs" not in st.session_state:
     st.session_state.logs = load_data(DATA_FILE)
 else:
-    # Refresh from file in case it was updated elsewhere
     st.session_state.logs = load_data(DATA_FILE)
 
 logs = st.session_state.logs
@@ -426,7 +414,7 @@ logs = st.session_state.logs
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 
 with tab1:
-    st.markdown("# 📝 Log Activity")
+    st.markdown("### 📝 Log Activity")
     left, right = st.columns(2)
 
     with left:
@@ -461,7 +449,7 @@ with tab1:
                     with open(DATA_FILE, "w") as f:
                         json.dump(st.session_state.logs, f)
                     
-                    st.cache_data.clear() # Clear cache so data updates correctly
+                    st.cache_data.clear() 
                     st.success(f"Meal logged at {meal_datetime.strftime('%Y-%m-%d %H:%M')}!")
                     st.rerun()
 
@@ -496,12 +484,12 @@ with tab1:
                     with open(DATA_FILE, "w") as f:
                         json.dump(st.session_state.logs, f)
                     
-                    st.cache_data.clear() # Clear cache so data updates correctly
+                    st.cache_data.clear() 
                     st.success(f"Flare-up logged at {flare_datetime.strftime('%Y-%m-%d %H:%M')}.")
                     st.rerun()
 
 with tab2:
-    st.markdown("# 📋 History")
+    st.markdown("### 📋 History")
     if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.logs = []
         with open(DATA_FILE, "w") as f:
@@ -547,9 +535,8 @@ with tab2:
             """, unsafe_allow_html=True)
 
 with tab3:
-    st.markdown("# 📊 Analysis")
+    st.markdown("### 📊 Analysis")
     
-    # Check data maturity
     total_days = len(set([l["timestamp"][:10] for l in logs]))
     if total_days < 30:
         st.markdown(f"""
@@ -644,12 +631,13 @@ with tab3:
                     st.markdown(f"<div style='font-size: 0.9rem; opacity: 0.8; margin-left: 16px;'>• {item}</div>", unsafe_allow_html=True)
 
 with tab4:
-    st.markdown("# 🔮 Risk Forecast")
+    st.markdown("### 🔮 Risk Forecast")
     st.markdown("**Check your meal before eating**")
 
     with st.form("predict_form"):
+        # FIX: Replaced the empty string "" with a descriptive label to satisfy Streamlit accessibility constraints
         predict_txt = st.text_input(
-            "", 
+            "Meal to check", 
             placeholder="e.g. Shrimp wonton noodle soup with avocado",
             label_visibility="collapsed"
         )
@@ -664,7 +652,6 @@ with tab4:
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
-                # Risk Calculation (Untouched logic)
                 trigger_scores = [analysis_scores.get(c, 0) for c in comps]
                 if trigger_scores:
                     max_score = max(trigger_scores)
@@ -674,7 +661,6 @@ with tab4:
                 else:
                     final_risk = 0
 
-                # === COMPACT MAIN RISK CARD ===
                 if final_risk >= 70:
                     color = "#FF3B30"
                     status = "HIGH RISK"
@@ -688,7 +674,6 @@ with tab4:
                     color = "#34C759"
                     status = "LIKELY SAFE"
 
-                # Text colors removed so it adapts to Light/Dark mode natively
                 st.markdown(f"""
                 <div style="background: {color}15; border: 1px solid {color}; 
                             border-radius: 12px; padding: 12px 16px; display: flex; 
@@ -703,15 +688,12 @@ with tab4:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # === COMPACT CHEMICAL BREAKDOWN ===
                 st.markdown("**Chemical Breakdown**")
 
-                # Sort all components
                 sorted_comps = sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True)
                 top_5_comps = sorted_comps[:5]
                 other_comps = sorted_comps[5:]
 
-                # Helper to render the bars cleanly without repeating code
                 def render_chemical_bar(c):
                     score = analysis_scores.get(c, 0)
                     if score >= 60:
@@ -727,7 +709,6 @@ with tab4:
                         bar_color = "#34C759"
                         level = "Minimal"
 
-                    # Background track changed to an RGBA grey so it works on light/dark mode
                     st.markdown(f"""
                     <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 12px; 
                                 margin-bottom: 6px; border-left: 4px solid {bar_color};">
@@ -747,17 +728,14 @@ with tab4:
                     </div>
                     """, unsafe_allow_html=True)
 
-                # Display Top 5
                 for c in top_5_comps:
                     render_chemical_bar(c)
 
-                # Display the rest inside an expander (if any exist)
                 if other_comps:
                     with st.expander(f"🧪 View {len(other_comps)} other chemicals"):
                         for c in other_comps:
                             render_chemical_bar(c)
 
-                # Compact Recommendation
                 st.markdown("<hr style='margin: 16px 0;'/>", unsafe_allow_html=True)
                 if final_risk >= 60:
                     st.error("**High caution** — Consider avoiding this meal.")

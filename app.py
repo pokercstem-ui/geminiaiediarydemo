@@ -9,7 +9,7 @@ from presets import get_preset_logs
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="GutPattern", page_icon="🧩")
-st.markdown("# 🧩 GutPattern")
+st.markdown("# E-Diary")
 st.caption("Track meals, eczema flares, and trigger patterns in one clean place.")
 
 st.markdown(

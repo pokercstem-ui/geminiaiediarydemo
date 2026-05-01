@@ -581,7 +581,7 @@ with tab4:
                 # === MORE SENSITIVE OVERALL RISK ASSESSMENT ===
                 if max_risk >= 50:
                     st.error("### ⚠️ HIGH RISK\nThis meal contains chemicals that frequently correlate with your flare-ups.")
-                elif max_risk >= 25:
+                elif max_risk >= 35:
                     st.warning("### ⚡ Moderate Risk\nSome chemicals show notable correlation with your flares.")
                 elif max_risk >= 10:
                     st.info("### Low but Notable Risk\nMinor patterns detected in your history.")
@@ -603,9 +603,9 @@ with tab4:
                     # Risk level label
                     if score >= 60:
                         level = "🔴 High Risk"
-                    elif score >= 50:
+                    elif score >= 45:
                         level = "🟠 Moderate Risk"
-                    elif score >= 30:
+                    elif score >= 25:
                         level = "🟡 Low Risk"
                     else:
                         level = "🟢 Minimal Risk"

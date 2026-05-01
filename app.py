@@ -24,7 +24,8 @@ st.markdown(
     <style>
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
-    .stButton>button {text-align: left; padding: 0.2rem 0.5rem;}
+    /* Made buttons standard alignment so the 🔍 centers nicely */
+    .stButton>button {padding: 0.2rem 0.5rem;} 
     </style>
     """,
     unsafe_allow_html=True
@@ -485,14 +486,18 @@ with tab3:
     if not scores:
         st.write("Keep logging! Patterns appear once you have enough meals and safe days recorded.")
     else:
-        st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline. Click a chemical to learn more about it.")
+        st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline.")
         
         for s in scores:
             col1, col2 = st.columns([3, 1])
             with col1:
-                # Making the chemical name a button that triggers the st.dialog
-                if st.button(f"🔍 **{s['component']}**", key=f"btn_{s['component']}", use_container_width=True):
-                    show_chemical_profile(s['component'], s['occurrences'], s['hit_rate'], s["score"])
+                # Layout the text and button side-by-side using inner columns
+                text_col, btn_col = st.columns([0.85, 0.15], vertical_alignment="center")
+                with text_col:
+                    st.markdown(f"**{s['component']}**")
+                with btn_col:
+                    if st.button("🔍", key=f"btn_{s['component']}", help=f"Learn more about {s['component']}"):
+                        show_chemical_profile(s['component'], s['occurrences'], s['hit_rate'], s["score"])
                 
                 st.caption(f"Eaten {s['occurrences']} times | Triggered flare {s['hit_rate']}% of the time")
                 st.progress(s["score"] / 100)

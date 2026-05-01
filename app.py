@@ -554,7 +554,7 @@ with tab3:
 
 with tab4:
     st.subheader("🔮 Risk Forecast")
-    st.write("Predict potential triggers and protective foods before you eat.")
+    st.write("Predict potential triggers before you eat.")
 
     with st.form("predict_form"):
         predict_txt = st.text_input("Enter a meal to check:",
@@ -572,59 +572,53 @@ with tab4:
             else:
                 st.markdown(f"**Extracted {len(comps)} chemicals**")
 
-                # === NEW: Calculate Final Risk Score with Protective Bonus ===
-                total_risk = 0.0
-                protective_set = {"Vitamin E", "vitamin e"}
-
-                for c in comps:
-                    score = analysis_scores.get(c, 0)
-                    if c in protective_set or "vitamin e" in c.lower():
-                        total_risk -= 32                      # Strong protection
-                    else:
-                        total_risk += score * 0.75            # Normal triggers weighted
-
-                final_risk = max(-55, min(int(total_risk), 100))
+                # === SIMPLIFIED & STABLE RISK CALCULATION ===
+                trigger_scores = [analysis_scores.get(c, 0) for c in comps]
+                
+                if trigger_scores:
+                    max_score = max(trigger_scores)
+                    avg_score = sum(trigger_scores) / len(trigger_scores)
+                    
+                    # Balanced final risk: 70% max + 30% average
+                    final_risk = int(max_score * 0.7 + avg_score * 0.3)
+                    final_risk = min(final_risk, 100)   # Cap at 100
+                else:
+                    final_risk = 0
 
                 # === Overall Assessment ===
-                if final_risk >= 65:
+                if final_risk >= 70:
                     st.error(f"### ⚠️ HIGH RISK\nOverall Score: **{final_risk}/100**")
-                elif final_risk >= 40:
+                elif final_risk >= 45:
                     st.warning(f"### ⚡ Moderate Risk\nOverall Score: **{final_risk}/100**")
-                elif final_risk >= 15:
-                    st.info(f"### Low Risk\nOverall Score: **{final_risk}/100**")
-                elif final_risk >= 0:
-                    st.success(f"### Likely Safe\nOverall Score: **{final_risk}/100**")
+                elif final_risk >= 20:
+                    st.info(f"### Low but Notable Risk\nOverall Score: **{final_risk}/100**")
                 else:
-                    st.success(f"### ✅ BENEFICIAL / ENCOURAGED\nOverall Score: **{final_risk}/100**")
+                    st.success(f"### Likely Safe\nOverall Score: **{final_risk}/100**")
 
                 st.divider()
 
-                # === YOUR ORIGINAL CHEMICAL RISK BREAKDOWN (Retained + Enhanced) ===
+                # === ORIGINAL CHEMICAL RISK BREAKDOWN (Kept as you liked) ===
                 st.subheader("Chemical Risk Breakdown")
-                
+               
                 risk_found = False
                 for c in sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True):
                     score = analysis_scores.get(c, 0)
-
+                   
                     if score > 0:
                         risk_found = True
-
-                    # Enhanced labeling with protective support
-                    if c in protective_set or "vitamin e" in c.lower():
-                        level = "🟢 Protective / Encouraged"
-                        display_score = f"**{-32}** (Protective)"
-                        st.success(f"**{c}**: {level} — {display_score}")
+                   
+                    # Risk level label
+                    if score >= 60:
+                        level = "🔴 High Risk"
+                    elif score >= 45:
+                        level = "🟠 Moderate Risk"
+                    elif score >= 25:
+                        level = "🟡 Low Risk"
                     else:
-                        if score >= 60:
-                            level = "🔴 High Risk"
-                        elif score >= 45:
-                            level = "🟠 Moderate Risk"
-                        elif score >= 25:
-                            level = "🟡 Low Risk"
-                        else:
-                            level = "🟢 Minimal Risk"
-                        st.write(f"**{c}**: {level} — **{score}/100**")
-                        st.progress(score / 100)
+                        level = "🟢 Minimal Risk"
+                    
+                    st.write(f"**{c}**: {level} — **{score}/100**")
+                    st.progress(score / 100)
 
                 if not risk_found and comps:
                     st.caption("All detected chemicals have very low or no risk correlation in your current data.")
@@ -632,11 +626,9 @@ with tab4:
                 st.divider()
 
                 # Final Recommendation
-                if final_risk < 0:
-                    st.markdown("**💡 Recommendation:** This meal is beneficial based on your logs. Feel encouraged to eat it.")
-                elif final_risk >= 50:
+                if final_risk >= 60:
                     st.markdown("**💡 Recommendation:** High caution. Consider avoiding or testing carefully.")
-                elif final_risk >= 25:
+                elif final_risk >= 35:
                     st.markdown("**💡 Recommendation:** Moderate caution. Monitor symptoms if you eat this.")
                 else:
                     st.markdown("**💡 Recommendation:** This meal appears relatively safe based on your current patterns.")

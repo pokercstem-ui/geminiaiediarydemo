@@ -401,7 +401,11 @@ with tab1:
 
     with left:
         with st.container(border=True):
-            st.markdown("### 🍎 Log a Meal")
+            st.markdown("""
+                <div style="background: rgba(128,128,128,0.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">🍎 Log a Meal</h3>
+                </div>
+            """, unsafe_allow_html=True)
             with st.form("meal_form", clear_on_submit=True):
                 col_date1, col_time1 = st.columns(2)
                 with col_date1:
@@ -433,7 +437,11 @@ with tab1:
 
     with right:
         with st.container(border=True):
-            st.markdown("### 🚨 Log a Flare-up")
+            st.markdown("""
+                <div style="background: #FF3B3015; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #FF3B30;">
+                    <h3 style="margin: 0; color: #FF3B30; font-size: 1.1rem;">🚨 Log a Flare-up</h3>
+                </div>
+            """, unsafe_allow_html=True)
             with st.form("flare_form", clear_on_submit=True):
                 col_date2, col_time2 = st.columns(2)
                 with col_date2:
@@ -461,14 +469,18 @@ with tab1:
                     st.cache_data.clear() # Clear cache so data updates correctly
                     st.success(f"Flare-up logged at {flare_datetime.strftime('%Y-%m-%d %H:%M')}.")
                     st.rerun()
+
 with tab2:
-    st.subheader("History")
-    if st.button("🗑️ Clear All History"):
-        st.session_state.logs = []
-        with open(DATA_FILE, "w") as f:
-            json.dump([], f)
-        st.cache_data.clear()
-        st.rerun()
+    col_title, col_btn = st.columns([0.7, 0.3], vertical_alignment="center")
+    with col_title:
+        st.subheader("History")
+    with col_btn:
+        if st.button("🗑️ Clear History", use_container_width=True):
+            st.session_state.logs = []
+            with open(DATA_FILE, "w") as f:
+                json.dump([], f)
+            st.cache_data.clear()
+            st.rerun()
 
     for l in logs:
         t = datetime.fromisoformat(l["timestamp"]).strftime("%b %d, %H:%M")
@@ -477,7 +489,12 @@ with tab2:
             ingredients = l.get("ingredients", [])
             chem_comp = l.get("chemical_composition", {})
             
-            st.info(f"🍴 **{l['content']}** \n*{t}*")
+            st.markdown(f"""
+            <div style="background: rgba(128,128,128,0.1); border-left: 4px solid #34C759; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-weight: 600; font-size: 1rem;">🍴 {l['content']}</div>
+                <div style="font-size: 0.8rem; opacity: 0.7;">{t}</div>
+            </div>
+            """, unsafe_allow_html=True)
             
             if ingredients or chem_comp:
                 with st.expander("View Breakdown"):
@@ -490,12 +507,16 @@ with tab2:
             symptoms = ", ".join(l.get("symptoms", [])) or "Not specified"
             areas = ", ".join(l.get("affected_areas", [])) or "Not specified"
 
-            st.error(
-                f"🚨 **Flare-up**: Severity {l.get('severity', 0)}  \n"
-                f"**Symptoms:** {symptoms}  \n"
-                f"**Affected areas:** {areas}  \n"
-                f"*{t}*"
-            )
+            st.markdown(f"""
+            <div style="background: #FF3B3015; border-left: 4px solid #FF3B30; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-weight: 700; color: #FF3B30; font-size: 1rem;">🚨 Flare-up (Severity {l.get('severity', 0)})</div>
+                    <div style="font-size: 0.8rem; opacity: 0.7;">{t}</div>
+                </div>
+                <div style="font-size: 0.85rem; opacity: 0.8;"><b>Symptoms:</b> {symptoms}</div>
+                <div style="font-size: 0.85rem; opacity: 0.8;"><b>Areas:</b> {areas}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 with tab3:
     st.subheader("Analysis")
@@ -503,7 +524,12 @@ with tab3:
     # Check data maturity
     total_days = len(set([l["timestamp"][:10] for l in logs]))
     if total_days < 30:
-        st.info(f"📊 **Data Maturity: Learning Phase ({total_days}/30 days)**. Patterns are emerging, but keep logging to increase confidence and filter out coincidences.")
+        st.markdown(f"""
+        <div style="background: #34C75915; border-radius: 8px; padding: 12px; margin-bottom: 16px; border-left: 4px solid #34C759;">
+            <div style="font-weight: 600; font-size: 0.95rem;">📊 Data Maturity: Learning Phase ({total_days}/30 days)</div>
+            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 4px;">Patterns are emerging, but keep logging to increase confidence and filter out coincidences.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     scores = run_analysis(logs)
 
@@ -513,21 +539,48 @@ with tab3:
         st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline.")
         
         for s in scores:
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                # Layout the text and button side-by-side using inner columns
-                text_col, btn_col = st.columns([0.85, 0.15], vertical_alignment="center")
-                with text_col:
-                    st.markdown(f"**{s['component']}**")
-                with btn_col:
-                    if st.button("🔍", key=f"btn_{s['component']}", help=f"Learn more about {s['component']}"):
-                        show_chemical_profile(s['component'], s['occurrences'], s['hit_rate'], s["score"])
-                
-                st.caption(f"Eaten {s['occurrences']} times | Triggered flare {s['hit_rate']}% of the time")
-                st.progress(s["score"] / 100)
-            with col2:
-                st.metric("Score", f"{s['score']}/100")
+            score_val = s["score"]
+            if score_val >= 60:
+                bar_color = "#FF3B30"
+                level = "High"
+            elif score_val >= 45:
+                bar_color = "#FF9500"
+                level = "Moderate"
+            elif score_val >= 25:
+                bar_color = "#F5AD27"
+                level = "Low"
+            else:
+                bar_color = "#34C759"
+                level = "Minimal"
 
+            col_html, col_btn = st.columns([0.88, 0.12], vertical_alignment="center")
+            
+            with col_html:
+                st.markdown(f"""
+                <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 12px; 
+                            margin-bottom: 2px; border-left: 4px solid {bar_color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 0.95rem;">{s['component']}</div>
+                            <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">
+                                Eaten {s['occurrences']}x • {s['hit_rate']}% Flare Rate
+                            </div>
+                        </div>
+                        <div style="text-align: right; min-width: 60px;">
+                            <span style="font-size: 1.1rem; font-weight: 600; color: {bar_color};">{score_val}</span>
+                            <span style="font-size: 0.75rem; opacity: 0.7;">/100</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 6px; height: 3px; background: rgba(128, 128, 128, 0.2); border-radius: 10px; overflow: hidden;">
+                        <div style="width: {score_val}%; height: 100%; background: {bar_color};"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with col_btn:
+                if st.button("🔍", key=f"btn_{s['component']}", help=f"Learn more about {s['component']}", use_container_width=True):
+                    show_chemical_profile(s['component'], s['occurrences'], s['hit_rate'], s["score"])
+        
         st.divider()
         st.subheader("🤖 AI Review")
         
@@ -535,22 +588,32 @@ with tab3:
             with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
                 ai_review = ai_review_analysis(logs, scores)
 
-            col1, col2 = st.columns([2, 1])
-            with col1:
-                st.metric("AI Agreement", ai_review['agreement'].title())
-                st.metric("AI Confidence", f"{ai_review['confidence']}%")
-            with col2:
-                st.write(f"**Reason:**\n{ai_review['reason']}")
+            st.markdown(f"""
+            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                <div style="flex: 1; background: rgba(128,128,128,0.1); border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 0.8rem; opacity: 0.7; text-transform: uppercase;">Agreement</div>
+                    <div style="font-size: 1.2rem; font-weight: 700;">{ai_review['agreement'].title()}</div>
+                </div>
+                <div style="flex: 1; background: rgba(128,128,128,0.1); border-radius: 8px; padding: 12px; text-align: center;">
+                    <div style="font-size: 0.8rem; opacity: 0.7; text-transform: uppercase;">Confidence</div>
+                    <div style="font-size: 1.2rem; font-weight: 700;">{ai_review['confidence']}%</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"**Reason:**\n<div style='opacity: 0.85; font-size: 0.95rem;'>{ai_review['reason']}</div>", unsafe_allow_html=True)
+            st.write("")
 
             if ai_review.get("notable_support"):
-                st.success("**Supporting evidence:**")
+                st.markdown("<div style='color: #34C759; font-weight: 600;'>✓ Supporting evidence:</div>", unsafe_allow_html=True)
                 for item in ai_review["notable_support"]:
-                    st.write(f"• {item}")
+                    st.markdown(f"<div style='font-size: 0.9rem; opacity: 0.8; margin-left: 16px;'>• {item}</div>", unsafe_allow_html=True)
+                st.write("")
 
             if ai_review.get("notable_concerns"):
-                st.warning("**Areas of uncertainty:**")
+                st.markdown("<div style='color: #F5AD27; font-weight: 600;'>⚠ Areas of uncertainty:</div>", unsafe_allow_html=True)
                 for item in ai_review["notable_concerns"]:
-                    st.write(f"• {item}")
+                    st.markdown(f"<div style='font-size: 0.9rem; opacity: 0.8; margin-left: 16px;'>• {item}</div>", unsafe_allow_html=True)
 
 with tab4:
     st.subheader("🔮 Risk Forecast")

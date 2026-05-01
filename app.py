@@ -10,7 +10,10 @@ from presets import get_preset_logs
 
 # --- PAGE SETUP ---
 # Load the uploaded image for the app icon
-icon = Image.open("ed01.jpg")
+try:
+    icon = Image.open("ed01.jpg")
+except FileNotFoundError:
+    icon = "🧩" # Fallback if image isn't found during testing
 
 st.set_page_config(page_title="E-diary", page_icon=icon)
 st.markdown("# E-Diary")
@@ -21,6 +24,7 @@ st.markdown(
     <style>
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
     .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
+    .stButton>button {text-align: left; padding: 0.2rem 0.5rem;}
     </style>
     """,
     unsafe_allow_html=True
@@ -69,7 +73,7 @@ def load_data(filepath):
             json.dump(presets, f)
         return presets
 
-# --- AI PARSING ---
+# --- AI PARSING & INFO ---
 @st.cache_data(show_spinner=False)
 def analyze_meal_with_ai(text):
     """Caches meal analysis so identical meals process instantly."""
@@ -117,6 +121,29 @@ def analyze_meal_with_ai(text):
         st.sidebar.error(f"AI Error: {str(e)}")
         return {"ingredients": [], "chemical_composition": {}}
 
+@st.cache_data(show_spinner=False)
+def get_chemical_info_from_ai(chemical_name):
+    """Fetches descriptive information about a specific chemical component."""
+    if not client:
+        return "API Key missing. Cannot fetch details."
+        
+    prompt = f"""
+    Briefly explain what '{chemical_name}' is in the context of food. 
+    1. What is its normal biological or chemical role?
+    2. Where is it commonly found?
+    3. How might it contribute to inflammation, intolerances, or eczema flare-ups?
+    Format the response clearly using markdown bullet points or short paragraphs. Keep it concise but informative.
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="default",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Error fetching information: {str(e)}"
+
 # --- HELPER LOGIC ---
 def extract_chemicals_from_meal(meal):
     chemicals = set()
@@ -129,6 +156,23 @@ def extract_chemicals_from_meal(meal):
             for c in chem_list.split(','):
                 chemicals.add(c.strip().title())
     return list(chemicals)
+
+# --- POP-UP DIALOG FUNCTION ---
+@st.dialog("🔬 Chemical Profile")
+def show_chemical_profile(chemical_name, occurrences, hit_rate, score):
+    st.markdown(f"### {chemical_name}")
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Times Logged", occurrences)
+    col2.metric("Flare Correlation", f"{hit_rate}%")
+    col3.metric("Risk Score", f"{score}/100")
+    
+    st.divider()
+    
+    with st.spinner("Fetching data..."):
+        info = get_chemical_info_from_ai(chemical_name)
+        
+    st.markdown(info)
 
 # --- AI REVIEW FUNCTIONS ---
 def build_evidence_summary(logs, scores, max_items=8):
@@ -441,11 +485,16 @@ with tab3:
     if not scores:
         st.write("Keep logging! Patterns appear once you have enough meals and safe days recorded.")
     else:
-        st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline.")
+        st.caption("Chemical constituents ranked by how much they exceed your normal flare baseline. Click a chemical to learn more about it.")
+        
         for s in scores:
             col1, col2 = st.columns([3, 1])
             with col1:
-                st.write(f"**{s['component']}** *(Eaten {s['occurrences']} times | Triggered flare {s['hit_rate']}% of the time)*")
+                # Making the chemical name a button that triggers the st.dialog
+                if st.button(f"🔍 **{s['component']}**", key=f"btn_{s['component']}", use_container_width=True):
+                    show_chemical_profile(s['component'], s['occurrences'], s['hit_rate'], s["score"])
+                
+                st.caption(f"Eaten {s['occurrences']} times | Triggered flare {s['hit_rate']}% of the time")
                 st.progress(s["score"] / 100)
             with col2:
                 st.metric("Score", f"{s['score']}/100")

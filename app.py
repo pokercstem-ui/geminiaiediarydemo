@@ -630,7 +630,7 @@ with tab4:
                         bar_color = "#FF9500"
                         level = "Moderate"
                     elif score >= 25:
-                        bar_color = "#FFCC00"
+                        bar_color = "#F5AD27"
                         level = "Low"
                     else:
                         bar_color = "#34C759"

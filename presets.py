@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import random
 
 def get_preset_logs():
     """Generates 3 full weeks of granular HK diet logs with a unique Week 2."""
@@ -32,9 +33,9 @@ def get_preset_logs():
     def generate_standard_week(start_day_offset):
         d = start_day_offset
         # Day 1 (Safe)
-        add_meal(d+0, 8, "Plain Century Egg Congee", ["Rice", "Century Egg", "Pork"], {"Century Egg": ["Tyramine", "Hydrogen Sulfide"], "Pork": ["Tyramine"]})
-        add_meal(d+0, 13, "Sliced Fish Rice Noodle Soup", ["Grass Carp", "Rice Noodles", "Ginger"], {"Grass Carp": ["Parvalbumin"], "Ginger": ["Salicylic Acid", "Gingerol"]})
-        add_meal(d+0, 16, "Fuji Apple (Snack)", ["Apple"], {"Apple": ["Salicylic Acid", "Fructose"]})
+        add_meal(d+0, random.randint(6,8), "Plain Century Egg Congee", ["Rice", "Century Egg", "Pork"], {"Century Egg": ["Tyramine", "Hydrogen Sulfide"], "Pork": ["Tyramine"]})
+        add_meal(d+0, random.randint(12,13), "Sliced Fish Rice Noodle Soup", ["Grass Carp", "Rice Noodles", "Ginger"], {"Grass Carp": ["Parvalbumin"], "Ginger": ["Salicylic Acid", "Gingerol"]})
+        add_meal(d+0, random.randint(14,18), "Fuji Apple (Snack)", ["Apple"], {"Apple": ["Salicylic Acid", "Fructose"]})
         add_meal(d+0, 19, "Steamed Chicken with Choy Sum", ["Chicken", "Choy Sum", "White Rice"], {"Chicken": ["Tyramine"], "Choy Sum": ["Salicylic Acid"]})
         # Day 2 (Trigger: Shellfish)
         add_meal(d+1, 8, "Macaroni in Soup with Spam", ["Macaroni", "Spam", "Broth"], {"Macaroni": ["Gliadin", "Glutenin"], "Spam": ["Sodium Nitrite", "Tyramine"]})

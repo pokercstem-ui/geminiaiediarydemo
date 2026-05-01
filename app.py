@@ -554,11 +554,11 @@ with tab3:
 
 with tab4:
     st.subheader("🔮 Risk Forecast")
-    st.markdown("### Predict triggers before you eat")
+    st.markdown("### Check your meal before eating")
 
     with st.form("predict_form"):
         predict_txt = st.text_input(
-            "What are you planning to eat?",
+            "", 
             placeholder="e.g. Shrimp wonton noodle soup with avocado",
             label_visibility="collapsed"
         )
@@ -573,11 +573,10 @@ with tab4:
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
-                st.markdown(f"**Found {len(comps)} chemical components**")
+                st.markdown(f"**{len(comps)} chemicals detected**")
 
-                # === SIMPLIFIED RISK CALCULATION ===
+                # Risk Calculation
                 trigger_scores = [analysis_scores.get(c, 0) for c in comps]
-                
                 if trigger_scores:
                     max_score = max(trigger_scores)
                     avg_score = sum(trigger_scores) / len(trigger_scores)
@@ -586,44 +585,35 @@ with tab4:
                 else:
                     final_risk = 0
 
-                # === iOS-STYLE MAIN RISK CARD ===
+                # === MAIN RISK CARD (iOS Style) ===
                 if final_risk >= 70:
-                    card_color = "#FF3B30"  # Red
+                    color = "#FF3B30"
                     status = "HIGH RISK"
-                    emoji = "🔴"
                 elif final_risk >= 45:
-                    card_color = "#FF9500"  # Orange
+                    color = "#FF9500"
                     status = "MODERATE RISK"
-                    emoji = "🟠"
                 elif final_risk >= 20:
-                    card_color = "#FFCC00"  # Yellow
+                    color = "#FFCC00"
                     status = "LOW RISK"
-                    emoji = "🟡"
                 else:
-                    card_color = "#34C759"  # Green
+                    color = "#34C759"
                     status = "LIKELY SAFE"
-                    emoji = "🟢"
 
                 st.markdown(f"""
-                <div style="
-                    background: linear-gradient(135deg, {card_color}22, {card_color}11);
-                    border: 2px solid {card_color};
-                    border-radius: 20px;
-                    padding: 28px 20px;
-                    text-align: center;
-                    margin: 15px 0;
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.08);">
-                    <h1 style="font-size: 3.2rem; margin: 0; color: {card_color};">{emoji}</h1>
-                    <h2 style="margin: 8px 0 4px 0; color: {card_color};">{status}</h2>
-                    <p style="font-size: 1.1rem; opacity: 0.9; margin: 0;">
-                        Risk Score — <strong>{final_risk}</strong>/100
+                <div style="background: {color}15; border: 2px solid {color}; 
+                            border-radius: 18px; padding: 24px 20px; text-align: center; 
+                            margin: 16px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <div style="font-size: 2.8rem; margin-bottom: 6px;">{status.split()[0]}</div>
+                    <h2 style="margin: 0 0 8px 0; color: {color}; font-weight: 600;">{status}</h2>
+                    <p style="font-size: 1.35rem; font-weight: 500; margin: 0; color: #ffffff;">
+                        {final_risk} <span style="font-size: 1rem; opacity: 0.8;">/100</span>
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.divider()
 
-                # === CHEMICAL BREAKDOWN - iOS Style Cards ===
+                # === COMPACT CHEMICAL BREAKDOWN ===
                 st.markdown("#### Chemical Breakdown")
 
                 for c in sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True):
@@ -631,38 +621,32 @@ with tab4:
 
                     if score >= 60:
                         bar_color = "#FF3B30"
-                        level = "High Risk"
+                        level = "High"
                     elif score >= 45:
                         bar_color = "#FF9500"
                         level = "Moderate"
                     elif score >= 25:
                         bar_color = "#FFCC00"
-                        level = "Low Risk"
+                        level = "Low"
                     else:
                         bar_color = "#34C759"
                         level = "Minimal"
 
                     st.markdown(f"""
-                    <div style="
-                        background: #1E1E1E;
-                        border-radius: 16px;
-                        padding: 16px 20px;
-                        margin-bottom: 12px;
-                        border-left: 5px solid {bar_color};">
+                    <div style="background: #1F1F1F; border-radius: 14px; padding: 14px 18px; 
+                                margin-bottom: 10px; border-left: 5px solid {bar_color};">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <strong style="font-size: 1.05rem;">{c}</strong><br>
-                                <span style="font-size: 0.9rem; opacity: 0.7;">{level}</span>
+                                <div style="font-weight: 600; font-size: 1.05rem; color: white;">{c}</div>
+                                <div style="font-size: 0.85rem; color: #aaaaaa;">{level} Risk</div>
                             </div>
                             <div style="text-align: right;">
-                                <strong style="font-size: 1.4rem; color: {bar_color};">{score}</strong>
-                                <span style="font-size: 0.85rem; opacity: 0.6;">/100</span>
+                                <span style="font-size: 1.35rem; font-weight: 600; color: {bar_color};">{score}</span>
+                                <span style="font-size: 0.85rem; color: #888;">/100</span>
                             </div>
                         </div>
-                        <div style="margin-top: 10px;">
-                            <div style="height: 6px; background: #333; border-radius: 10px; overflow: hidden;">
-                                <div style="width: {score}%; height: 100%; background: {bar_color}; border-radius: 10px;"></div>
-                            </div>
+                        <div style="margin-top: 8px; height: 5px; background: #333333; border-radius: 10px; overflow: hidden;">
+                            <div style="width: {score}%; height: 100%; background: {bar_color}; border-radius: 10px;"></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -670,8 +654,8 @@ with tab4:
                 # Recommendation
                 st.divider()
                 if final_risk >= 60:
-                    st.error("**Recommendation:** Consider avoiding this meal or testing with caution.")
-                elif final_risk >= 35:
-                    st.warning("**Recommendation:** Moderate caution advised. Log any symptoms.")
+                    st.error("**Recommendation:** High caution — consider avoiding this meal.")
+                elif final_risk >= 40:
+                    st.warning("**Recommendation:** Moderate caution. Monitor closely if you eat it.")
                 else:
-                    st.success("**Recommendation:** This meal looks relatively safe based on your history.")
+                    st.success("**Recommendation:** This meal appears relatively safe according to your logs.")

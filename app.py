@@ -358,7 +358,7 @@ def run_analysis(logs):
                 chem_stats[c]["hits"] += 1
                 chem_stats[c]["severity_sum"] += mr["severity"]
 
-    SMOOTHING_WEIGHT = 2.8
+    SMOOTHING_WEIGHT = 3
     results = []
     
     for c, data in chem_stats.items():
@@ -367,13 +367,13 @@ def run_analysis(logs):
         smoothed_rate = (hits + (global_rate * SMOOTHING_WEIGHT)) / (eats + SMOOTHING_WEIGHT)
         risk_multiplier = smoothed_rate / max(global_rate, 0.05) 
         
-        if risk_multiplier > 1.09:
+        if risk_multiplier > 1.1:
             avg_sev = (data["severity_sum"] / hits) if hits > 0 else 0
             sev_multiplier = 1.0 + (avg_sev / 20.0) 
             raw_score = (risk_multiplier - 1.0) * 35 * sev_multiplier 
             final_score = min(int(raw_score), 100)
             
-            if final_score > 4.8:
+            if final_score > 5:
                 results.append({
                         "component": c, 
                         "score": final_score, 

@@ -554,15 +554,18 @@ with tab3:
 
 with tab4:
     st.subheader("🔮 Risk Forecast")
-    st.write("Predict potential triggers before you eat.")
+    st.markdown("### Predict triggers before you eat")
 
     with st.form("predict_form"):
-        predict_txt = st.text_input("Enter a meal to check:",
-                                   placeholder="e.g. Avocado salmon bowl with spinach")
-        check_btn = st.form_submit_button("🔍 Check Pattern Risk")
+        predict_txt = st.text_input(
+            "What are you planning to eat?",
+            placeholder="e.g. Shrimp wonton noodle soup with avocado",
+            label_visibility="collapsed"
+        )
+        check_btn = st.form_submit_button("Check Risk", use_container_width=True)
 
     if check_btn and predict_txt:
-        with st.spinner("Analyzing meal against your history..."):
+        with st.spinner("Analyzing against your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
             comps = extract_chemicals_from_meal(analysis_data)
             analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
@@ -570,65 +573,105 @@ with tab4:
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
-                st.markdown(f"**Extracted {len(comps)} chemicals**")
+                st.markdown(f"**Found {len(comps)} chemical components**")
 
-                # === SIMPLIFIED & STABLE RISK CALCULATION ===
+                # === SIMPLIFIED RISK CALCULATION ===
                 trigger_scores = [analysis_scores.get(c, 0) for c in comps]
                 
                 if trigger_scores:
                     max_score = max(trigger_scores)
                     avg_score = sum(trigger_scores) / len(trigger_scores)
-                    
-                    # Balanced final risk: 70% max + 30% average
                     final_risk = int(max_score * 0.7 + avg_score * 0.3)
-                    final_risk = min(final_risk, 100)   # Cap at 100
+                    final_risk = min(final_risk, 100)
                 else:
                     final_risk = 0
 
-                # === Overall Assessment ===
+                # === iOS-STYLE MAIN RISK CARD ===
                 if final_risk >= 70:
-                    st.error(f"### ⚠️ HIGH RISK\nOverall Score: **{final_risk}/100**")
+                    card_color = "#FF3B30"  # Red
+                    status = "HIGH RISK"
+                    emoji = "🔴"
                 elif final_risk >= 45:
-                    st.warning(f"### ⚡ Moderate Risk\nOverall Score: **{final_risk}/100**")
+                    card_color = "#FF9500"  # Orange
+                    status = "MODERATE RISK"
+                    emoji = "🟠"
                 elif final_risk >= 20:
-                    st.info(f"### Low but Notable Risk\nOverall Score: **{final_risk}/100**")
+                    card_color = "#FFCC00"  # Yellow
+                    status = "LOW RISK"
+                    emoji = "🟡"
                 else:
-                    st.success(f"### Likely Safe\nOverall Score: **{final_risk}/100**")
+                    card_color = "#34C759"  # Green
+                    status = "LIKELY SAFE"
+                    emoji = "🟢"
+
+                st.markdown(f"""
+                <div style="
+                    background: linear-gradient(135deg, {card_color}22, {card_color}11);
+                    border: 2px solid {card_color};
+                    border-radius: 20px;
+                    padding: 28px 20px;
+                    text-align: center;
+                    margin: 15px 0;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.08);">
+                    <h1 style="font-size: 3.2rem; margin: 0; color: {card_color};">{emoji}</h1>
+                    <h2 style="margin: 8px 0 4px 0; color: {card_color};">{status}</h2>
+                    <p style="font-size: 1.1rem; opacity: 0.9; margin: 0;">
+                        Risk Score — <strong>{final_risk}</strong>/100
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
 
                 st.divider()
 
-                # === ORIGINAL CHEMICAL RISK BREAKDOWN (Kept as you liked) ===
-                st.subheader("Chemical Risk Breakdown")
-               
-                risk_found = False
+                # === CHEMICAL BREAKDOWN - iOS Style Cards ===
+                st.markdown("#### Chemical Breakdown")
+
                 for c in sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True):
                     score = analysis_scores.get(c, 0)
-                   
-                    if score > 0:
-                        risk_found = True
-                   
-                    # Risk level label
+
                     if score >= 60:
-                        level = "🔴 High Risk"
+                        bar_color = "#FF3B30"
+                        level = "High Risk"
                     elif score >= 45:
-                        level = "🟠 Moderate Risk"
+                        bar_color = "#FF9500"
+                        level = "Moderate"
                     elif score >= 25:
-                        level = "🟡 Low Risk"
+                        bar_color = "#FFCC00"
+                        level = "Low Risk"
                     else:
-                        level = "🟢 Minimal Risk"
-                    
-                    st.write(f"**{c}**: {level} — **{score}/100**")
-                    st.progress(score / 100)
+                        bar_color = "#34C759"
+                        level = "Minimal"
 
-                if not risk_found and comps:
-                    st.caption("All detected chemicals have very low or no risk correlation in your current data.")
+                    st.markdown(f"""
+                    <div style="
+                        background: #1E1E1E;
+                        border-radius: 16px;
+                        padding: 16px 20px;
+                        margin-bottom: 12px;
+                        border-left: 5px solid {bar_color};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 1.05rem;">{c}</strong><br>
+                                <span style="font-size: 0.9rem; opacity: 0.7;">{level}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong style="font-size: 1.4rem; color: {bar_color};">{score}</strong>
+                                <span style="font-size: 0.85rem; opacity: 0.6;">/100</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <div style="height: 6px; background: #333; border-radius: 10px; overflow: hidden;">
+                                <div style="width: {score}%; height: 100%; background: {bar_color}; border-radius: 10px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
+                # Recommendation
                 st.divider()
-
-                # Final Recommendation
                 if final_risk >= 60:
-                    st.markdown("**💡 Recommendation:** High caution. Consider avoiding or testing carefully.")
+                    st.error("**Recommendation:** Consider avoiding this meal or testing with caution.")
                 elif final_risk >= 35:
-                    st.markdown("**💡 Recommendation:** Moderate caution. Monitor symptoms if you eat this.")
+                    st.warning("**Recommendation:** Moderate caution advised. Log any symptoms.")
                 else:
-                    st.markdown("**💡 Recommendation:** This meal appears relatively safe based on your current patterns.")
+                    st.success("**Recommendation:** This meal looks relatively safe based on your history.")

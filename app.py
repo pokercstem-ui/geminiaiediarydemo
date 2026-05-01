@@ -597,7 +597,7 @@ with tab4:
                     color = "#34C759"
                     status = "LIKELY SAFE"
 
-                # Switched to a compact horizontal flex layout
+                # Text colors removed so it adapts to Light/Dark mode natively
                 st.markdown(f"""
                 <div style="background: {color}15; border: 1px solid {color}; 
                             border-radius: 12px; padding: 12px 16px; display: flex; 
@@ -606,54 +606,65 @@ with tab4:
                     <h2 style="margin: 0; color: {color}; font-weight: 700; font-size: 1.25rem;">
                         {status}
                     </h2>
-                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0; color: white;">
-                        {final_risk}<span style="font-size: 0.9rem; opacity: 0.75;">/100</span>
+                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">
+                        {final_risk}<span style="font-size: 0.9rem; opacity: 0.7;">/100</span>
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # === COMPACT CHEMICAL BREAKDOWN (TOP 5) ===
-                # Sort and slice to get only the top 5
-                top_5_comps = sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True)[:5]
+                # === COMPACT CHEMICAL BREAKDOWN ===
+                st.markdown("**Chemical Breakdown**")
 
-                # Tucked inside an expander
-                with st.expander("🧪 View Chemical Breakdown (Top 5)"):
-                    for c in top_5_comps:
-                        score = analysis_scores.get(c, 0)
+                # Sort all components
+                sorted_comps = sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True)
+                top_5_comps = sorted_comps[:5]
+                other_comps = sorted_comps[5:]
 
-                        if score >= 60:
-                            bar_color = "#FF3B30"
-                            level = "High"
-                        elif score >= 45:
-                            bar_color = "#FF9500"
-                            level = "Moderate"
-                        elif score >= 25:
-                            bar_color = "#FFCC00"
-                            level = "Low"
-                        else:
-                            bar_color = "#34C759"
-                            level = "Minimal"
+                # Helper to render the bars cleanly without repeating code
+                def render_chemical_bar(c):
+                    score = analysis_scores.get(c, 0)
+                    if score >= 60:
+                        bar_color = "#FF3B30"
+                        level = "High"
+                    elif score >= 45:
+                        bar_color = "#FF9500"
+                        level = "Moderate"
+                    elif score >= 25:
+                        bar_color = "#FFCC00"
+                        level = "Low"
+                    else:
+                        bar_color = "#34C759"
+                        level = "Minimal"
 
-                        # Replaced #1F1F1F with a style-matching {bar_color}10 tint
-                        # Reduced padding/margins for better compactness
-                        st.markdown(f"""
-                        <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 12px; 
-                                    margin-bottom: 6px; border-left: 4px solid {bar_color};">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 600; color: white; font-size: 0.95rem;">{c}</div>
-                                    <div style="font-size: 0.75rem; color: #aaaaaa; margin-top: 2px;">{level} Risk</div>
-                                </div>
-                                <div style="text-align: right; min-width: 60px;">
-                                    <span style="font-size: 1.1rem; font-weight: 600; color: {bar_color};">{score}</span>
-                                    <span style="font-size: 0.75rem; color: #888;">/100</span>
-                                </div>
+                    # Background track changed to an RGBA grey so it works on light/dark mode
+                    st.markdown(f"""
+                    <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 12px; 
+                                margin-bottom: 6px; border-left: 4px solid {bar_color};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 0.95rem;">{c}</div>
+                                <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">{level} Risk</div>
                             </div>
-                            <div style="margin-top: 6px; height: 3px; background: #333; border-radius: 10px; overflow: hidden;">
-                                <div style="width: {score}%; height: 100%; background: {bar_color};"></div>
+                            <div style="text-align: right; min-width: 60px;">
+                                <span style="font-size: 1.1rem; font-weight: 600; color: {bar_color};">{score}</span>
+                                <span style="font-size: 0.75rem; opacity: 0.7;">/100</span>
                             </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        <div style="margin-top: 6px; height: 3px; background: rgba(128, 128, 128, 0.2); border-radius: 10px; overflow: hidden;">
+                            <div style="width: {score}%; height: 100%; background: {bar_color};"></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # Display Top 5
+                for c in top_5_comps:
+                    render_chemical_bar(c)
+
+                # Display the rest inside an expander (if any exist)
+                if other_comps:
+                    with st.expander(f"🧪 View {len(other_comps)} other chemicals"):
+                        for c in other_comps:
+                            render_chemical_bar(c)
 
                 # Compact Recommendation
                 st.markdown("<hr style='margin: 16px 0;'/>", unsafe_allow_html=True)

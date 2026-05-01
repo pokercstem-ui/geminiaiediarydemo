@@ -60,33 +60,37 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    """Loads data and ensures presets are always included in logs.json."""
+    """Loads data and ensures presets are included only once."""
     # Always grab the presets first
     presets = get_preset_logs()
     
-    # Try to load existing data
+    # Try to load existing user data
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
                 existing_logs = json.load(f)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, FileNotFoundError):
             existing_logs = []
     else:
         existing_logs = []
 
-    # Merge presets and existing logs
-    # Using a dictionary with the timestamp as the key prevents duplicates
-    merged_logs = {log["timestamp"]: log for log in presets}
-    
+    # Use timestamp as unique key to prevent duplicates
+    log_dict = {}
+
+    # First add presets (with lower priority)
+    for log in presets:
+        log_dict[log["timestamp"]] = log
+
+    # Then add user logs (they will overwrite presets if timestamp matches)
     for log in existing_logs:
-        merged_logs[log["timestamp"]] = log
+        log_dict[log["timestamp"]] = log
 
-    # Convert back to a list and sort by timestamp (newest first)
-    final_logs = sorted(list(merged_logs.values()), key=lambda x: x["timestamp"], reverse=True)
+    # Convert back to list and sort by timestamp (newest first)
+    final_logs = sorted(list(log_dict.values()), key=lambda x: x["timestamp"], reverse=True)
 
-    # Save the combined data back to the JSON file
+    # Save cleaned data back to file
     with open(filepath, "w") as f:
-        json.dump(final_logs, f)
+        json.dump(final_logs, f, indent=2)
 
     return final_logs
 
@@ -354,7 +358,7 @@ def run_analysis(logs):
                 chem_stats[c]["hits"] += 1
                 chem_stats[c]["severity_sum"] += mr["severity"]
 
-    SMOOTHING_WEIGHT = 2.5
+    SMOOTHING_WEIGHT = 2.8
     results = []
     
     for c, data in chem_stats.items():
@@ -363,13 +367,13 @@ def run_analysis(logs):
         smoothed_rate = (hits + (global_rate * SMOOTHING_WEIGHT)) / (eats + SMOOTHING_WEIGHT)
         risk_multiplier = smoothed_rate / max(global_rate, 0.05) 
         
-        if risk_multiplier > 1.05:
+        if risk_multiplier > 1.09:
             avg_sev = (data["severity_sum"] / hits) if hits > 0 else 0
             sev_multiplier = 1.0 + (avg_sev / 20.0) 
             raw_score = (risk_multiplier - 1.0) * 35 * sev_multiplier 
             final_score = min(int(raw_score), 100)
             
-            if final_score > 4.5:
+            if final_score > 4.8:
                 results.append({
                         "component": c, 
                         "score": final_score, 
@@ -381,6 +385,9 @@ def run_analysis(logs):
 
 # --- LOAD DATA TO SESSION ---
 if "logs" not in st.session_state:
+    st.session_state.logs = load_data(DATA_FILE)
+else:
+    # Refresh from file in case it was updated elsewhere
     st.session_state.logs = load_data(DATA_FILE)
 
 logs = st.session_state.logs

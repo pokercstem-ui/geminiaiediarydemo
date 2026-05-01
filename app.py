@@ -60,19 +60,35 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    """Caches the file read operation. Loads presets if no file exists."""
+    """Loads data and ensures presets are always included in logs.json."""
+    # Always grab the presets first
+    presets = get_preset_logs()
+    
+    # Try to load existing data
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
-                return json.load(f)
+                existing_logs = json.load(f)
         except json.JSONDecodeError:
-            return get_preset_logs()
+            existing_logs = []
     else:
-        # If file doesn't exist, start with presets and save them immediately
-        presets = get_preset_logs()
-        with open(filepath, "w") as f:
-            json.dump(presets, f)
-        return presets
+        existing_logs = []
+
+    # Merge presets and existing logs
+    # Using a dictionary with the timestamp as the key prevents duplicates
+    merged_logs = {log["timestamp"]: log for log in presets}
+    
+    for log in existing_logs:
+        merged_logs[log["timestamp"]] = log
+
+    # Convert back to a list and sort by timestamp (newest first)
+    final_logs = sorted(list(merged_logs.values()), key=lambda x: x["timestamp"], reverse=True)
+
+    # Save the combined data back to the JSON file
+    with open(filepath, "w") as f:
+        json.dump(final_logs, f)
+
+    return final_logs
 
 # --- AI PARSING & INFO ---
 @st.cache_data(show_spinner=False)
@@ -95,6 +111,7 @@ def analyze_meal_with_ai(text):
         f"- Identify specific additives/preservatives (e.g., 'Sodium Nitrite', 'Sodium Benzoate', 'Monosodium Glutamate', 'Tartrazine', 'Sulfites').\n"
         f"- Identify specific carbohydrates/sugars if they act as triggers (e.g., 'Fructans', 'Galacto-oligosaccharides', 'Fructose').\n\n"
         f"Do NOT include generic macro/micronutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific known triggers.\n"
+        f"Make it concise, don't add if-cases, think about the general case. \n"
         f"Return ONLY a valid JSON object matching this structure: "
         f'{{"ingredients": ["Tomato"], "chemical_composition": {{"Tomato": ["Solanine", "Tomatine", "Histamine", "Salicylic Acid"]}}}}'
     )

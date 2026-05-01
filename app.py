@@ -4,6 +4,9 @@ import os
 from datetime import datetime
 import openai
 
+# --- NEW: Import the presets from the separate file ---
+from presets import get_preset_logs
+
 # --- PAGE SETUP ---
 st.set_page_config(page_title="GutPattern", page_icon="🧩")
 st.markdown("# 🧩 GutPattern")
@@ -48,14 +51,19 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    """Caches the file read operation."""
+    """Caches the file read operation. Loads presets if no file exists."""
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
                 return json.load(f)
         except json.JSONDecodeError:
-            return []
-    return []
+            return get_preset_logs()
+    else:
+        # If file doesn't exist, start with presets and save them immediately
+        presets = get_preset_logs()
+        with open(filepath, "w") as f:
+            json.dump(presets, f)
+        return presets
 
 # --- AI PARSING ---
 @st.cache_data(show_spinner=False)
@@ -68,7 +76,7 @@ def analyze_meal_with_ai(text):
     prompt = (
         f"Analyze this meal: '{text}'. Provide the following:\n"
         f"1. 'ingredients': A list of the main base ingredients.\n"
-        f"2. 'chemical_composition': A dictionary mapping ingredients to a LIST of their potential dietary triggers (e.g., 'Histamine', 'Salicylates', 'Gluten', 'FODMAPs', 'Capsaicin', 'Lactose', 'Sulfites', 'Nightshades', 'Amines').\n"
+        f"2. 'chemical_composition': A dictionary mapping ingredients to a LIST of their potential dietary triggers (e.g., 'Histamine', 'Salicylates', 'Gluten', 'FODMAPs', 'Capsaicin', 'Lactose', 'Sulfites', 'Nightshades', 'Amines', 'Shellfish').\n"
         f"CRITICAL: Do NOT include generic nutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific allergens.\n"
         f"Return ONLY a valid JSON object matching this structure: "
         f'{{"ingredients": ["Tomato"], "chemical_composition": {{"Tomato": ["Salicylates", "Histamine", "Nightshades"]}}}}'
@@ -352,8 +360,8 @@ with tab2:
     st.subheader("History")
     if st.button("🗑️ Clear All History"):
         st.session_state.logs = []
-        if os.path.exists(DATA_FILE):
-            os.remove(DATA_FILE)
+        with open(DATA_FILE, "w") as f:
+            json.dump([], f)
         st.cache_data.clear()
         st.rerun()
 
@@ -403,7 +411,6 @@ with tab3:
         st.divider()
         st.subheader("🤖 AI Review")
         
-        # The button is still required to stop the AI from running in the background while logging meals
         if st.button("Generate AI Review"):
             with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
                 ai_review = ai_review_analysis(logs, scores)

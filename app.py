@@ -76,10 +76,18 @@ def analyze_meal_with_ai(text):
     prompt = (
         f"Analyze this meal: '{text}'. Provide the following:\n"
         f"1. 'ingredients': A list of the main base ingredients.\n"
-        f"2. 'chemical_composition': A dictionary mapping ingredients to a LIST of their potential dietary triggers (e.g., 'Histamine', 'Salicylates', 'Gluten', 'FODMAPs', 'Capsaicin', 'Lactose', 'Sulfites', 'Nightshades', 'Amines', 'Shellfish').\n"
-        f"CRITICAL: Do NOT include generic nutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific allergens.\n"
+        f"2. 'chemical_composition': A dictionary mapping ingredients to a LIST of specific, granular chemical compounds and molecular triggers known to cause inflammation, intolerances, or allergic reactions.\n\n"
+        f"CRITICAL INSTRUCTION: Go in-depth to the molecular level. Do NOT use broad, generic categories like 'Gluten', 'Dairy', 'Nightshades', 'Shellfish', 'Amines', or 'FODMAPs'.\n"
+        f"- Instead of 'Gluten', list specific proteins (e.g., 'Gliadin', 'Glutenin').\n"
+        f"- Instead of 'Dairy', list specific proteins/sugars (e.g., 'Casein', 'Beta-lactoglobulin', 'Lactose').\n"
+        f"- Instead of 'Amines', list the specific biogenic amines (e.g., 'Tyramine', 'Putrescine', 'Cadaverine', 'Histamine').\n"
+        f"- Instead of 'Nightshades', list the specific alkaloids (e.g., 'Solanine', 'Tomatine', 'Capsaicin').\n"
+        f"- Identify specific allergenic proteins where applicable (e.g., 'Tropomyosin' in shellfish, 'Ovalbumin' in egg).\n"
+        f"- Identify specific additives/preservatives (e.g., 'Sodium Nitrite', 'Sodium Benzoate', 'Monosodium Glutamate', 'Tartrazine', 'Sulfites').\n"
+        f"- Identify specific carbohydrates/sugars if they act as triggers (e.g., 'Fructans', 'Galacto-oligosaccharides', 'Fructose').\n\n"
+        f"Do NOT include generic macro/micronutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific known triggers.\n"
         f"Return ONLY a valid JSON object matching this structure: "
-        f'{{"ingredients": ["Tomato"], "chemical_composition": {{"Tomato": ["Salicylates", "Histamine", "Nightshades"]}}}}'
+        f'{{"ingredients": ["Tomato"], "chemical_composition": {{"Tomato": ["Solanine", "Tomatine", "Histamine", "Salicylic Acid"]}}}}'
     )
 
     try:

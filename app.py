@@ -554,11 +554,11 @@ with tab3:
 
 with tab4:
     st.subheader("🔮 Risk Forecast")
-    st.write("Predict potential triggers before you eat. Now more sensitive to foods with risk.")
+    st.write("Predict potential triggers and protective foods before you eat.")
 
     with st.form("predict_form"):
-        predict_txt = st.text_input("Enter a meal to check:", 
-                                   placeholder="e.g. Tomato pasta with cheese and basil")
+        predict_txt = st.text_input("Enter a meal to check:",
+                                   placeholder="e.g. Avocado salmon bowl with spinach")
         check_btn = st.form_submit_button("🔍 Check Pattern Risk")
 
     if check_btn and predict_txt:
@@ -570,48 +570,61 @@ with tab4:
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
-                st.markdown(f"**Extracted chemicals:** {len(comps)} components")
+                st.markdown(f"**Extracted {len(comps)} chemicals**")
 
-                # Calculate max risk for overall assessment
-                max_risk = 0
+                # === NEW: Calculate Final Risk Score with Protective Bonus ===
+                total_risk = 0.0
+                protective_set = {"Vitamin E", "vitamin e"}
+
                 for c in comps:
                     score = analysis_scores.get(c, 0)
-                    max_risk = max(max_risk, score)
+                    if c in protective_set or "vitamin e" in c.lower():
+                        total_risk -= 32                      # Strong protection
+                    else:
+                        total_risk += score * 0.75            # Normal triggers weighted
 
-                # === MORE SENSITIVE OVERALL RISK ASSESSMENT ===
-                if max_risk >= 50:
-                    st.error("### ⚠️ HIGH RISK\nThis meal contains chemicals that frequently correlate with your flare-ups.")
-                elif max_risk >= 35:
-                    st.warning("### ⚡ Moderate Risk\nSome chemicals show notable correlation with your flares.")
-                elif max_risk >= 10:
-                    st.info("### Low but Notable Risk\nMinor patterns detected in your history.")
+                final_risk = max(-55, min(int(total_risk), 100))
+
+                # === Overall Assessment ===
+                if final_risk >= 65:
+                    st.error(f"### ⚠️ HIGH RISK\nOverall Score: **{final_risk}/100**")
+                elif final_risk >= 40:
+                    st.warning(f"### ⚡ Moderate Risk\nOverall Score: **{final_risk}/100**")
+                elif final_risk >= 15:
+                    st.info(f"### Low Risk\nOverall Score: **{final_risk}/100**")
+                elif final_risk >= 0:
+                    st.success(f"### Likely Safe\nOverall Score: **{final_risk}/100**")
                 else:
-                    st.success("### Likely Low Risk\nNo significant risk patterns found based on your logs.")
+                    st.success(f"### ✅ BENEFICIAL / ENCOURAGED\nOverall Score: **{final_risk}/100**")
 
                 st.divider()
 
-                # === CHEMICALS LISTED INDIVIDUALLY (Like Before) ===
+                # === YOUR ORIGINAL CHEMICAL RISK BREAKDOWN (Retained + Enhanced) ===
                 st.subheader("Chemical Risk Breakdown")
                 
                 risk_found = False
                 for c in sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True):
                     score = analysis_scores.get(c, 0)
-                    
+
                     if score > 0:
                         risk_found = True
-                    
-                    # Risk level label
-                    if score >= 60:
-                        level = "🔴 High Risk"
-                    elif score >= 45:
-                        level = "🟠 Moderate Risk"
-                    elif score >= 25:
-                        level = "🟡 Low Risk"
-                    else:
-                        level = "🟢 Minimal Risk"
 
-                    st.write(f"**{c}**: {level} — **{score}/100**")
-                    st.progress(score / 100)
+                    # Enhanced labeling with protective support
+                    if c in protective_set or "vitamin e" in c.lower():
+                        level = "🟢 Protective / Encouraged"
+                        display_score = f"**{-32}** (Protective)"
+                        st.success(f"**{c}**: {level} — {display_score}")
+                    else:
+                        if score >= 60:
+                            level = "🔴 High Risk"
+                        elif score >= 45:
+                            level = "🟠 Moderate Risk"
+                        elif score >= 25:
+                            level = "🟡 Low Risk"
+                        else:
+                            level = "🟢 Minimal Risk"
+                        st.write(f"**{c}**: {level} — **{score}/100**")
+                        st.progress(score / 100)
 
                 if not risk_found and comps:
                     st.caption("All detected chemicals have very low or no risk correlation in your current data.")
@@ -619,9 +632,11 @@ with tab4:
                 st.divider()
 
                 # Final Recommendation
-                if max_risk >= 40:
-                    st.markdown("**💡 Recommendation:** Consider avoiding or eating this meal cautiously and monitor for symptoms within 48 hours.")
-                elif max_risk >= 15:
-                    st.markdown("**💡 Recommendation:** Moderate caution. Log any symptoms if you try this meal.")
+                if final_risk < 0:
+                    st.markdown("**💡 Recommendation:** This meal is beneficial based on your logs. Feel encouraged to eat it.")
+                elif final_risk >= 50:
+                    st.markdown("**💡 Recommendation:** High caution. Consider avoiding or testing carefully.")
+                elif final_risk >= 25:
+                    st.markdown("**💡 Recommendation:** Moderate caution. Monitor symptoms if you eat this.")
                 else:
                     st.markdown("**💡 Recommendation:** This meal appears relatively safe based on your current patterns.")

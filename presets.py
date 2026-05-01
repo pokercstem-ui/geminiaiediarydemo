@@ -1,330 +1,129 @@
 from datetime import datetime, timedelta
 
 def get_preset_logs():
-    """Generates 1 week of granular HK diet preset logs (4 meals/day + flares)."""
+    """Generates 3 full weeks of granular HK diet logs with a unique Week 2."""
     now = datetime.now()
-    return [
-        # --- DAY 1 (Most Recent) ---
-        {
-            "type": "meal",
-            "content": "Steamed Minced Pork with Preserved Egg and White Rice",
-            "ingredients": ["Pork", "Salted Duck Egg", "White Rice"],
-            "chemical_composition": {
-                "Pork": ["Tyramine"],
-                "Salted Duck Egg": ["Ovalbumin", "Tyramine", "Hydrogen Sulfide"]
-            },
-            "timestamp": (now - timedelta(hours=8)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Fuji Apple (Snack)",
-            "ingredients": ["Apple"],
-            "chemical_composition": {
-                "Apple": ["Salicylic Acid", "Fructose", "Mal d 1"]
-            },
-            "timestamp": (now - timedelta(hours=12)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Vegetarian Fried Rice with Choy Sum",
-            "ingredients": ["Rice", "Choy Sum", "Egg", "Vegetable Oil"],
-            "chemical_composition": {
-                "Choy Sum": ["Salicylic Acid", "Glucosinolates"],
-                "Egg": ["Ovalbumin", "Ovomucoid"]
-            },
-            "timestamp": (now - timedelta(hours=15)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Plain Congee with Youtiao (Fried Dough)",
-            "ingredients": ["Rice", "Wheat Flour", "Oil"],
-            "chemical_composition": {
-                "Wheat Flour": ["Gliadin", "Glutenin"]
-            },
-            "timestamp": (now - timedelta(hours=20)).isoformat()
-        },
+    base_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    logs = []
 
-        # --- DAY 2 (Trigger Day) ---
-        {
+    def add_meal(days_ago, hour, content, ingredients, chem_comp):
+        t = base_date - timedelta(days=days_ago) + timedelta(hours=hour)
+        logs.append({
+            "type": "meal",
+            "content": content,
+            "ingredients": ingredients,
+            "chemical_composition": chem_comp,
+            "timestamp": t.isoformat()
+        })
+
+    def add_flare(days_ago, hour, severity, symptoms, areas):
+        t = base_date - timedelta(days=days_ago) + timedelta(hours=hour)
+        logs.append({
             "type": "flareup",
-            "severity": 6,
-            "symptoms": ["Redness", "Itching"],
-            "affected_areas": ["Neck", "Arms"],
-            "timestamp": (now - timedelta(hours=26)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Sichuan Hot Pot (Beef, Fish Balls, Enoki, Sa Cha Sauce)",
-            "ingredients": ["Beef", "Fish Paste", "Enoki Mushroom", "Sa Cha Sauce", "Broth"],
-            "chemical_composition": {
-                "Beef": ["Histamine", "Tyramine"],
-                "Fish Paste": ["Parvalbumin", "Histamine"],
-                "Sa Cha Sauce": ["Tropomyosin", "Monosodium Glutamate", "Histamine", "Capsaicin"]
-            },
-            "timestamp": (now - timedelta(hours=32)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Bubble Tea with Tapioca Pearls (Snack)",
-            "ingredients": ["Black Tea", "Milk", "Tapioca", "Sugar"],
-            "chemical_composition": {
-                "Black Tea": ["Tannic Acid", "Histamine"],
-                "Milk": ["Casein", "Beta-lactoglobulin", "Lactose"]
-            },
-            "timestamp": (now - timedelta(hours=36)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Sushi Lunch Set (Salmon, Tuna, Soy Sauce)",
-            "ingredients": ["Salmon", "Tuna", "Rice", "Soy Sauce", "Wasabi"],
-            "chemical_composition": {
-                "Salmon": ["Histamine", "Parvalbumin"],
-                "Tuna": ["Histamine", "Parvalbumin"],
-                "Soy Sauce": ["Tyramine", "Monosodium Glutamate", "Histamine", "Gliadin"]
-            },
-            "timestamp": (now - timedelta(hours=39)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Satay Beef Macaroni in Soup",
-            "ingredients": ["Beef", "Macaroni", "Satay Sauce", "Broth"],
-            "chemical_composition": {
-                "Beef": ["Histamine"],
-                "Macaroni": ["Gliadin", "Glutenin"],
-                "Satay Sauce": ["Ara h 1", "Ara h 2", "Histamine", "Capsaicin"]
-            },
-            "timestamp": (now - timedelta(hours=44)).isoformat()
-        },
+            "severity": severity,
+            "symptoms": symptoms,
+            "affected_areas": areas,
+            "timestamp": t.isoformat()
+        })
 
-        # --- DAY 3 (Safe Day) ---
-        {
-            "type": "meal",
-            "content": "Pan-fried Salmon with Asparagus",
-            "ingredients": ["Salmon", "Asparagus", "Olive Oil"],
-            "chemical_composition": {
-                "Salmon": ["Parvalbumin"],
-                "Asparagus": ["Asparagine", "Fructans"]
-            },
-            "timestamp": (now - timedelta(hours=56)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Fresh Mango (Snack)",
-            "ingredients": ["Mango"],
-            "chemical_composition": {
-                "Mango": ["Urushiol-related compounds", "Fructose"]
-            },
-            "timestamp": (now - timedelta(hours=60)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Steamed Chicken with Shiitake Mushrooms and Rice",
-            "ingredients": ["Chicken", "Shiitake Mushroom", "White Rice", "Soy Sauce"],
-            "chemical_composition": {
-                "Chicken": ["Tyramine"],
-                "Shiitake Mushroom": ["Lentinan", "Guanylic Acid", "Monosodium Glutamate"],
-                "Soy Sauce": ["Tyramine", "Monosodium Glutamate"]
-            },
-            "timestamp": (now - timedelta(hours=63)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Boiled Eggs and Whole Wheat Toast",
-            "ingredients": ["Egg", "Whole Wheat Bread"],
-            "chemical_composition": {
-                "Egg": ["Ovalbumin", "Ovomucoid"],
-                "Whole Wheat Bread": ["Gliadin", "Glutenin", "Fructans"]
-            },
-            "timestamp": (now - timedelta(hours=68)).isoformat()
-        },
+    # ==========================================
+    # WEEK 1 & 3: The Standard Baseline Pattern
+    # ==========================================
+    def generate_standard_week(start_day_offset):
+        d = start_day_offset
+        # Day 1 (Safe)
+        add_meal(d+0, 8, "Plain Century Egg Congee", ["Rice", "Century Egg", "Pork"], {"Century Egg": ["Tyramine", "Hydrogen Sulfide"], "Pork": ["Tyramine"]})
+        add_meal(d+0, 13, "Sliced Fish Rice Noodle Soup", ["Grass Carp", "Rice Noodles", "Ginger"], {"Grass Carp": ["Parvalbumin"], "Ginger": ["Salicylic Acid", "Gingerol"]})
+        add_meal(d+0, 16, "Fuji Apple (Snack)", ["Apple"], {"Apple": ["Salicylic Acid", "Fructose"]})
+        add_meal(d+0, 19, "Steamed Chicken with Choy Sum", ["Chicken", "Choy Sum", "White Rice"], {"Chicken": ["Tyramine"], "Choy Sum": ["Salicylic Acid"]})
+        # Day 2 (Trigger: Shellfish)
+        add_meal(d+1, 8, "Macaroni in Soup with Spam", ["Macaroni", "Spam", "Broth"], {"Macaroni": ["Gliadin", "Glutenin"], "Spam": ["Sodium Nitrite", "Tyramine"]})
+        add_meal(d+1, 13, "Dim Sum: Har Gow & Siu Mai", ["Shrimp", "Pork", "Wheat Wrapper"], {"Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"], "Wheat Wrapper": ["Gliadin"]})
+        add_meal(d+1, 16, "Hot Milk Tea (Snack)", ["Black Tea", "Evaporated Milk"], {"Black Tea": ["Tannic Acid"], "Evaporated Milk": ["Casein", "Lactose"]})
+        add_meal(d+1, 19, "Shrimp Wonton Noodle Soup", ["Shrimp", "Pork", "Wheat Noodles", "Broth"], {"Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"], "Wheat Noodles": ["Gliadin"]})
+        add_flare(d+1, 22, 7, ["Itching", "Redness", "Swelling"], ["Face", "Neck", "Arms"])
+        # Day 3 (Safe)
+        add_meal(d+2, 8, "Plain Oatmeal with Soy Milk", ["Rolled Oats", "Soy Milk"], {"Rolled Oats": ["Avenin"], "Soy Milk": ["Isoflavones"]})
+        add_meal(d+2, 13, "Vegetarian Fried Rice", ["Rice", "Choy Sum", "Egg"], {"Choy Sum": ["Salicylic Acid"], "Egg": ["Ovalbumin", "Ovomucoid"]})
+        add_meal(d+2, 16, "Fresh Mango (Snack)", ["Mango"], {"Mango": ["Urushiol-related compounds", "Fructose"]})
+        add_meal(d+2, 19, "Pan-fried Salmon with Asparagus", ["Salmon", "Asparagus"], {"Salmon": ["Parvalbumin"], "Asparagus": ["Fructans"]})
+        # Day 4 (Trigger: Amines)
+        add_meal(d+3, 8, "Pineapple Bun & Milk Tea", ["Wheat Flour", "Butter", "Black Tea", "Milk"], {"Wheat Flour": ["Gliadin"], "Butter": ["Casein"], "Black Tea": ["Tannic Acid"]})
+        add_meal(d+3, 13, "Char Siu Rice with Fried Egg", ["Pork", "Char Siu Sauce", "Egg", "Rice"], {"Pork": ["Tyramine"], "Char Siu Sauce": ["Monosodium Glutamate", "Salicylic Acid", "Tartrazine"], "Egg": ["Ovalbumin"]})
+        add_meal(d+3, 16, "Shredded Dried Squid (Snack)", ["Squid", "Sugar", "Salt"], {"Squid": ["Tropomyosin", "Histamine", "Tyramine"]})
+        add_meal(d+3, 19, "Pork Ribs with Black Bean Sauce", ["Pork Ribs", "Black Bean Sauce", "Rice"], {"Pork Ribs": ["Tyramine"], "Black Bean Sauce": ["Tyramine", "Monosodium Glutamate", "Putrescine"]})
+        add_flare(d+3, 23, 8, ["Oozing", "Sleep disturbance", "Itching"], ["Arms", "Elbows", "Back"])
+        # Day 5 (Safe)
+        add_meal(d+4, 8, "Boiled Eggs and Whole Wheat Toast", ["Egg", "Whole Wheat Bread"], {"Egg": ["Ovalbumin"], "Whole Wheat Bread": ["Gliadin", "Fructans"]})
+        add_meal(d+4, 13, "Minced Pork with Preserved Egg", ["Pork", "Salted Duck Egg", "Rice"], {"Pork": ["Tyramine"], "Salted Duck Egg": ["Ovalbumin", "Tyramine"]})
+        add_meal(d+4, 16, "Tofu Fa (Snack)", ["Soybeans", "Ginger"], {"Soybeans": ["Isoflavones"], "Ginger": ["Salicylic Acid", "Gingerol"]})
+        add_meal(d+4, 19, "Stir-fried Beef with Broccoli", ["Beef", "Broccoli", "Garlic"], {"Beef": ["Tyramine"], "Broccoli": ["Salicylic Acid"], "Garlic": ["Fructans"]})
+        # Day 6 (Trigger: Shellfish & Spices)
+        add_meal(d+5, 8, "Rice Noodle Roll (Cheong Fun)", ["Rice Flour", "Sweet Soy Sauce"], {"Sweet Soy Sauce": ["Tyramine", "Monosodium Glutamate", "Histamine", "Gliadin"]})
+        add_meal(d+5, 13, "Spicy Crab with Garlic", ["Crab", "Garlic", "Chili"], {"Crab": ["Tropomyosin", "Arginine Kinase"], "Garlic": ["Fructans"], "Chili": ["Capsaicin"]})
+        add_meal(d+5, 16, "Shrimp Crackers (Snack)", ["Shrimp Paste", "Tapioca Flour"], {"Shrimp Paste": ["Tropomyosin", "Monosodium Glutamate"]})
+        add_meal(d+5, 19, "Tom Yum Goong", ["Shrimp", "Chili", "Lime", "Broth"], {"Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"], "Chili": ["Capsaicin"], "Lime": ["Citric Acid"]})
+        add_flare(d+5, 23, 9, ["Cracking", "Pain", "Severe Redness", "Swelling"], ["Hands", "Fingers", "Eyelids"])
+        # Day 7 (Recovery)
+        add_meal(d+6, 8, "Plain Congee with Youtiao", ["Rice", "Wheat Flour", "Oil"], {"Wheat Flour": ["Gliadin", "Glutenin"]})
+        add_meal(d+6, 13, "Hainanese Chicken Rice", ["Chicken", "Rice", "Ginger Scallion Oil"], {"Chicken": ["Tyramine"], "Ginger Scallion Oil": ["Salicylic Acid", "Gingerol", "Allicin"]})
+        add_meal(d+6, 16, "Banana (Snack)", ["Banana"], {"Banana": ["Amylase", "Chitinase"]})
+        add_meal(d+6, 19, "Tomato and Egg Stir-fry", ["Tomato", "Egg", "Rice"], {"Tomato": ["Tomatine", "Histamine", "Salicylic Acid"], "Egg": ["Ovalbumin"]})
 
-        # --- DAY 4 (Heavy Trigger Day) ---
-        {
-            "type": "flareup",
-            "severity": 8,
-            "symptoms": ["Oozing", "Swelling", "Sleep disturbance"],
-            "affected_areas": ["Face", "Eyelids", "Hands"],
-            "timestamp": (now - timedelta(hours=74)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Baked Pork Chop Rice with Tomato Sauce",
-            "ingredients": ["Pork Chop", "Tomato", "Cheese", "Rice"],
-            "chemical_composition": {
-                "Pork Chop": ["Tyramine"],
-                "Tomato": ["Tomatine", "Solanine", "Histamine", "Salicylic Acid"],
-                "Cheese": ["Casein", "Tyramine", "Histamine"]
-            },
-            "timestamp": (now - timedelta(hours=80)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Shrimp Crackers (Snack)",
-            "ingredients": ["Shrimp Paste", "Tapioca Flour", "Palm Oil"],
-            "chemical_composition": {
-                "Shrimp Paste": ["Tropomyosin", "Arginine Kinase", "Monosodium Glutamate"]
-            },
-            "timestamp": (now - timedelta(hours=84)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Tom Yum Goong (Thai Shrimp Soup) with Rice",
-            "ingredients": ["Shrimp", "Lemongrass", "Chili", "Lime", "Broth"],
-            "chemical_composition": {
-                "Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"],
-                "Chili": ["Capsaicin", "Salicylic Acid"],
-                "Lime": ["Citric Acid", "Histamine liberators"]
-            },
-            "timestamp": (now - timedelta(hours=87)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Shrimp Wonton Noodle Soup",
-            "ingredients": ["Shrimp", "Pork", "Wheat Noodles", "Broth"],
-            "chemical_composition": {
-                "Shrimp": ["Tropomyosin", "Arginine Kinase", "Histamine"],
-                "Wheat Noodles": ["Gliadin", "Glutenin"],
-                "Pork": ["Tyramine"]
-            },
-            "timestamp": (now - timedelta(hours=92)).isoformat()
-        },
+    # ==========================================
+    # WEEK 2: Unique Hardcoded Snippet
+    # ==========================================
+    def generate_unique_week_2(start_day_offset):
+        d = start_day_offset
+        # Day 8 (Safe)
+        add_meal(d+0, 8, "Rice Vermicelli with Fish Slices", ["Rice Vermicelli", "Grass Carp", "Broth"], {"Grass Carp": ["Parvalbumin"]})
+        add_meal(d+0, 13, "Steamed Pork Patty with Water Chestnut", ["Pork", "Water Chestnut", "Rice"], {"Pork": ["Tyramine"]})
+        add_meal(d+0, 16, "Dragon Fruit (Snack)", ["Dragon Fruit"], {"Dragon Fruit": ["Oligosaccharides"]})
+        add_meal(d+0, 19, "Winter Melon Soup with Lean Pork", ["Winter Melon", "Pork", "Broth"], {"Pork": ["Tyramine"]})
+        
+        # Day 9 (Trigger: Nightshades & Heavy Amines)
+        add_meal(d+1, 8, "Satay Beef Noodles", ["Beef", "Wheat Noodles", "Satay Sauce"], {"Beef": ["Histamine"], "Wheat Noodles": ["Gliadin"], "Satay Sauce": ["Ara h 1", "Histamine", "Capsaicin"]})
+        add_meal(d+1, 13, "Baked Pork Chop Rice with Tomato Sauce", ["Pork Chop", "Tomato", "Cheese", "Rice"], {"Pork Chop": ["Tyramine"], "Tomato": ["Tomatine", "Histamine", "Salicylic Acid"], "Cheese": ["Casein", "Tyramine"]})
+        add_meal(d+1, 16, "Hong Kong Style Egg Tart (Snack)", ["Egg", "Wheat Flour", "Butter"], {"Egg": ["Ovalbumin"], "Wheat Flour": ["Gliadin"], "Butter": ["Casein"]})
+        add_meal(d+1, 19, "Mapo Tofu with Rice", ["Tofu", "Minced Pork", "Chili Bean Paste", "Sichuan Peppercorn"], {"Tofu": ["Isoflavones"], "Minced Pork": ["Tyramine"], "Chili Bean Paste": ["Capsaicin", "Monosodium Glutamate", "Tyramine"], "Sichuan Peppercorn": ["Hydroxy-alpha sanshool"]})
+        add_flare(d+1, 22, 6, ["Redness", "Burning"], ["Face", "Chest"])
 
-        # --- DAY 5 (Recovery Day) ---
-        {
-            "type": "meal",
-            "content": "Stir-fried Beef with Choy Sum",
-            "ingredients": ["Beef", "Choy Sum", "Garlic", "Oil"],
-            "chemical_composition": {
-                "Beef": ["Tyramine"],
-                "Choy Sum": ["Salicylic Acid", "Glucosinolates"],
-                "Garlic": ["Allicin", "Fructans"]
-            },
-            "timestamp": (now - timedelta(hours=104)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Tofu Fa (Silken Tofu) with Ginger Syrup (Snack)",
-            "ingredients": ["Soybeans", "Ginger", "Sugar"],
-            "chemical_composition": {
-                "Soybeans": ["Phytic Acid", "Isoflavones"],
-                "Ginger": ["Salicylic Acid", "Gingerol"]
-            },
-            "timestamp": (now - timedelta(hours=108)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Sliced Grass Carp Fish Congee",
-            "ingredients": ["Grass Carp", "Rice", "Ginger"],
-            "chemical_composition": {
-                "Grass Carp": ["Parvalbumin"],
-                "Ginger": ["Salicylic Acid", "Gingerol"]
-            },
-            "timestamp": (now - timedelta(hours=111)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Oatmeal with Soy Milk",
-            "ingredients": ["Rolled Oats", "Soy Milk"],
-            "chemical_composition": {
-                "Rolled Oats": ["Avenin", "Phytic Acid"],
-                "Soy Milk": ["Phytic Acid", "Isoflavones"]
-            },
-            "timestamp": (now - timedelta(hours=116)).isoformat()
-        },
+        # Day 10 (Safe / Recovery)
+        add_meal(d+2, 8, "Plain Udon in Kelp Broth", ["Udon", "Kelp", "Broth"], {"Udon": ["Gliadin"], "Kelp": ["Iodine", "Monosodium Glutamate"]})
+        add_meal(d+2, 13, "Steamed Egg with Rice", ["Egg", "Rice", "Soy Sauce"], {"Egg": ["Ovalbumin"], "Soy Sauce": ["Tyramine", "Monosodium Glutamate"]})
+        add_meal(d+2, 16, "Asian Pear (Snack)", ["Pear"], {"Pear": ["Fructose", "Sorbitol"]})
+        add_meal(d+2, 19, "Steamed Chicken with Wood Ear Mushroom", ["Chicken", "Wood Ear Mushroom", "Rice"], {"Chicken": ["Tyramine"]})
 
-        # --- DAY 6 (Trigger Day) ---
-        {
-            "type": "flareup",
-            "severity": 7,
-            "symptoms": ["Dryness", "Cracking", "Pain"],
-            "affected_areas": ["Hands", "Fingers"],
-            "timestamp": (now - timedelta(hours=122)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Spicy Crab with Garlic and Chili (Typhoon Shelter Style)",
-            "ingredients": ["Crab", "Garlic", "Chili", "Black Bean"],
-            "chemical_composition": {
-                "Crab": ["Tropomyosin", "Arginine Kinase"],
-                "Garlic": ["Allicin", "Fructans"],
-                "Chili": ["Capsaicin"],
-                "Black Bean": ["Tyramine", "Putrescine"]
-            },
-            "timestamp": (now - timedelta(hours=128)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Shredded Dried Squid (Snack)",
-            "ingredients": ["Squid", "Sugar", "Salt"],
-            "chemical_composition": {
-                "Squid": ["Tropomyosin", "Histamine", "Tyramine"]
-            },
-            "timestamp": (now - timedelta(hours=132)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Curry Beef Brisket with Rice",
-            "ingredients": ["Beef Brisket", "Curry Powder", "Potato", "Rice"],
-            "chemical_composition": {
-                "Beef Brisket": ["Histamine", "Tyramine"],
-                "Curry Powder": ["Salicylic Acid", "Curcumin", "Capsaicin"],
-                "Potato": ["Solanine"]
-            },
-            "timestamp": (now - timedelta(hours=135)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Pineapple Bun with Butter (Bolo Bao) and Milk Tea",
-            "ingredients": ["Wheat Flour", "Butter", "Black Tea", "Evaporated Milk"],
-            "chemical_composition": {
-                "Wheat Flour": ["Gliadin", "Glutenin"],
-                "Butter": ["Casein", "Lactose"],
-                "Black Tea": ["Tannic Acid", "Histamine"],
-                "Evaporated Milk": ["Casein", "Beta-lactoglobulin"]
-            },
-            "timestamp": (now - timedelta(hours=140)).isoformat()
-        },
+        # Day 11 (Trigger: Heavy Shellfish & Soy)
+        add_meal(d+3, 8, "Cheong Fun with Peanut Sauce", ["Rice Flour", "Peanut Butter", "Hoisin Sauce"], {"Peanut Butter": ["Ara h 1", "Ara h 2", "Aflatoxin"], "Hoisin Sauce": ["Monosodium Glutamate", "Tyramine"]})
+        add_meal(d+3, 13, "Seafood Pan-fried Noodles", ["Shrimp", "Squid", "Scallop", "Wheat Noodles"], {"Shrimp": ["Tropomyosin"], "Squid": ["Tropomyosin"], "Scallop": ["Tropomyosin"], "Wheat Noodles": ["Gliadin"]})
+        add_meal(d+3, 16, "Vitasoy Soy Milk (Snack)", ["Soybeans", "Sugar"], {"Soybeans": ["Isoflavones", "Phytic Acid"]})
+        add_meal(d+3, 19, "Stir-fried Clams with Black Bean Sauce", ["Clams", "Black Bean Sauce", "Garlic", "Chili"], {"Clams": ["Tropomyosin", "Histamine"], "Black Bean Sauce": ["Tyramine", "Putrescine"], "Garlic": ["Fructans"], "Chili": ["Capsaicin"]})
+        add_flare(d+3, 23, 8, ["Severe Itching", "Swelling", "Oozing"], ["Eyelids", "Neck", "Arms"])
 
-        # --- DAY 7 (Oldest - Safe Day) ---
-        {
-            "type": "meal",
-            "content": "Steamed Pork Ribs with Black Bean Sauce, Rice",
-            "ingredients": ["Pork Ribs", "Black Bean Sauce", "Rice"],
-            "chemical_composition": {
-                "Pork Ribs": ["Tyramine"],
-                "Black Bean Sauce": ["Tyramine", "Monosodium Glutamate", "Putrescine"]
-            },
-            "timestamp": (now - timedelta(hours=152)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Hong Kong Style Egg Tart (Snack)",
-            "ingredients": ["Egg", "Wheat Flour", "Butter", "Sugar"],
-            "chemical_composition": {
-                "Egg": ["Ovalbumin", "Ovomucoid"],
-                "Wheat Flour": ["Gliadin", "Glutenin"],
-                "Butter": ["Casein"]
-            },
-            "timestamp": (now - timedelta(hours=156)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Hainanese Chicken Rice",
-            "ingredients": ["Chicken", "Rice", "Chicken Fat", "Ginger Scallion Oil"],
-            "chemical_composition": {
-                "Chicken": ["Tyramine"],
-                "Ginger Scallion Oil": ["Salicylic Acid", "Gingerol", "Allicin"]
-            },
-            "timestamp": (now - timedelta(hours=159)).isoformat()
-        },
-        {
-            "type": "meal",
-            "content": "Rice Noodle Roll (Cheong Fun) with Sweet Soy Sauce",
-            "ingredients": ["Rice Flour", "Sweet Soy Sauce", "Sesame Seeds"],
-            "chemical_composition": {
-                "Sweet Soy Sauce": ["Tyramine", "Histamine", "Monosodium Glutamate", "Gliadin"],
-                "Sesame Seeds": ["Ses i 1", "Phytic Acid"]
-            },
-            "timestamp": (now - timedelta(hours=164)).isoformat()
-        }
-    ]
+        # Day 12 (Safe)
+        add_meal(d+4, 8, "Congee with Lean Pork", ["Rice", "Pork"], {"Pork": ["Tyramine"]})
+        add_meal(d+4, 13, "Zucchini and Pork Stir-fry", ["Zucchini", "Pork", "Rice"], {"Pork": ["Tyramine"]})
+        add_meal(d+4, 16, "Papaya (Snack)", ["Papaya"], {"Papaya": ["Papain", "Chitinase"]})
+        add_meal(d+4, 19, "Steamed Tofu with Minced Pork", ["Tofu", "Pork", "Rice"], {"Tofu": ["Isoflavones"], "Pork": ["Tyramine"]})
+
+        # Day 13 (Trigger: Amines, Spices, Additives)
+        add_meal(d+5, 8, "Spam and Egg Sandwich", ["Spam", "Egg", "White Bread"], {"Spam": ["Sodium Nitrite", "Tyramine"], "Egg": ["Ovalbumin"], "White Bread": ["Gliadin", "Glutenin"]})
+        add_meal(d+5, 13, "Curry Beef Brisket Rice", ["Beef Brisket", "Curry Powder", "Potato", "Rice"], {"Beef Brisket": ["Histamine"], "Curry Powder": ["Capsaicin", "Salicylic Acid", "Curcumin"], "Potato": ["Solanine"]})
+        add_meal(d+5, 16, "Street Food: Curry Fishballs (Snack)", ["Fish Paste", "Curry Sauce"], {"Fish Paste": ["Parvalbumin", "Monosodium Glutamate"], "Curry Sauce": ["Capsaicin", "Tartrazine"]})
+        add_meal(d+5, 19, "Roast Duck with Rice", ["Duck", "Plum Sauce", "Rice"], {"Duck": ["Tyramine", "Histamine"], "Plum Sauce": ["Salicylic Acid", "Monosodium Glutamate"]})
+        add_flare(d+5, 23, 7, ["Itching", "Dryness"], ["Stomach", "Legs"])
+
+        # Day 14 (Safe)
+        add_meal(d+6, 8, "Plain Rice Noodles in Broth", ["Rice Noodles", "Broth"], {})
+        add_meal(d+6, 13, "Stir-fried Beef with Celery", ["Beef", "Celery", "Rice"], {"Beef": ["Tyramine"], "Celery": ["Apiin", "Mannitol"]})
+        add_meal(d+6, 16, "Watermelon (Snack)", ["Watermelon"], {"Watermelon": ["Fructose", "Profilin"]})
+        add_meal(d+6, 19, "Pan-fried Tofu with Soy Sauce", ["Tofu", "Soy Sauce", "Rice"], {"Tofu": ["Isoflavones"], "Soy Sauce": ["Tyramine", "Monosodium Glutamate"]})
+
+    # ==========================================
+    # Execute the Generators
+    # ==========================================
+    generate_standard_week(1)    # Week 1 (Days 1-7)
+    generate_unique_week_2(8)    # Week 2 (Days 8-14)
+
+    return sorted(logs, key=lambda x: x["timestamp"], reverse=True)

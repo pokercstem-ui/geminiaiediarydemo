@@ -23,26 +23,27 @@ st.markdown(
     /* Prevent content from hiding behind the bottom nav bar */
     .block-container {
         padding-top: 2rem !important;
-        padding-bottom: 100px !important; 
+        padding-bottom: 120px !important; 
     }
     
-    /* Target the exact wrapper holding the tab buttons and pin it to the bottom */
-    div[data-testid="stTabs"] > div:first-child {
+    /* TARGET ONLY THE TAB BUTTONS WRAPPER, NOT THE CONTENT PANELS */
+    div[data-testid="stTabs"] > div > div:first-of-type {
         position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        background-color: var(--background-color, #ffffff) !important;
-        z-index: 99999 !important;
+        background-color: var(--secondary-background-color) !important;
+        z-index: 999999 !important;
         border-top: 1px solid rgba(128,128,128,0.2) !important;
-        padding-bottom: env(safe-area-inset-bottom, 15px) !important;
+        padding-bottom: max(env(safe-area-inset-bottom), 15px) !important;
     }
 
-    /* Force the tablist to stretch full width */
+    /* Force the tablist to stretch full width and behave like a flexbox */
     div[data-testid="stTabs"] [role="tablist"] {
         display: flex !important;
         width: 100% !important;
         justify-content: space-around !important;
+        gap: 0 !important;
     }
 
     /* Divide into 4 equal buttons */
@@ -50,12 +51,14 @@ st.markdown(
         flex: 1 !important;
         justify-content: center !important;
         padding: 1rem 0 !important;
+        margin: 0 !important;
     }
 
-    /* Move the active highlight indicator to the top of the tab instead of the bottom */
+    /* Move the active highlight indicator to the top of the tab */
     div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
         top: 0 !important;
         bottom: auto !important;
+        background-color: var(--primary-color) !important;
     }
 
     .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
@@ -635,7 +638,6 @@ with tab4:
     st.markdown("**Check your meal before eating**")
 
     with st.form("predict_form"):
-        # FIX: Replaced the empty string "" with a descriptive label to satisfy Streamlit accessibility constraints
         predict_txt = st.text_input(
             "Meal to check", 
             placeholder="e.g. Shrimp wonton noodle soup with avocado",

@@ -128,11 +128,29 @@ def extract_chemicals_from_meal(meal):
 
 # --- AI REVIEW FUNCTIONS ---
 def build_evidence_summary(logs, scores, max_items=8):
-    meals = [l for l in logs if l["type"] == "meal"][:max_items]
-    flares = [l for l in logs if l["type"] == "flareup"][:max_items]
+    # Get the top chemical triggers to actively look for in the history
+    top_chemicals = [s["component"] for s in scores[:3]]
+    
+    meals = [l for l in logs if l["type"] == "meal"]
+    flares = [l for l in logs if l["type"] == "flareup"]
+
+    # Prioritize meals that contain the top suspected triggers
+    relevant_meals = []
+    for m in meals:
+        m_chems = extract_chemicals_from_meal(m)
+        if any(c in m_chems for c in top_chemicals):
+            relevant_meals.append(m)
+            
+    # If we don't have enough relevant meals, pad with recent ones
+    if len(relevant_meals) < max_items:
+        remaining_meals = [m for m in meals if m not in relevant_meals]
+        relevant_meals.extend(remaining_meals[:max_items - len(relevant_meals)])
+    
+    # Trim to max_items
+    relevant_meals = relevant_meals[:max_items]
 
     meal_summary = []
-    for m in meals:
+    for m in relevant_meals:
         meal_summary.append({
             "content": m.get("content", ""),
             "ingredients": m.get("ingredients", []),
@@ -141,7 +159,7 @@ def build_evidence_summary(logs, scores, max_items=8):
         })
 
     flare_summary = []
-    for f in flares:
+    for f in flares[:max_items]:
         flare_summary.append({
             "severity": f.get("severity", 0),
             "symptoms": f.get("symptoms", []),
@@ -150,11 +168,17 @@ def build_evidence_summary(logs, scores, max_items=8):
         })
 
     return {
-        "top_scores": scores[:5],
-        "recent_meals": meal_summary,
+        "top_suspects_stats": [
+            {
+                "chemical": s["component"], 
+                "times_eaten": s["occurrences"], 
+                "flare_correlation": f"{s['hit_rate']}%"
+            } for s in scores[:5]
+        ],
+        "relevant_evidence_meals": meal_summary,
         "recent_flares": flare_summary,
-        "total_meals": len([l for l in logs if l["type"] == "meal"]),
-        "total_flares": len([l for l in logs if l["type"] == "flareup"])
+        "total_meals_logged": len(meals),
+        "total_flares_logged": len(flares)
     }
 
 @st.cache_data(show_spinner=False)
@@ -170,9 +194,9 @@ You are reviewing a dietary trigger analysis for eczema patterns.
 The mathematical model ranked these chemicals as triggers based on timing and frequency.
 
 Task:
-1. Decide whether you agree with the mathematical judgement.
+1. Decide whether you agree with the mathematical judgement based on the provided evidence and stats.
 2. Return only JSON.
-3. Be conservative. If evidence is weak, say partial or uncertain.
+3. Be objective. Acknowledge that the dataset might be small, but evaluate the mathematical logic based strictly on the provided stats and evidence meals.
 
 Return schema:
 {{
@@ -191,7 +215,7 @@ Evidence:
         response = client.chat.completions.create(
             model="default",
             messages=[
-                {"role": "system", "content": "You are a cautious medical-pattern review assistant. Do not claim causation. Focus on whether the statistical pattern makes sense given the data."},
+                {"role": "system", "content": "You are a cautious medical-pattern review assistant. Do not claim absolute causation. Focus on whether the statistical pattern makes sense given the data. If the dataset is small, evaluate the existing data at face value while noting the sample size as a minor concern, not a dealbreaker."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.1
@@ -402,6 +426,12 @@ with tab2:
 
 with tab3:
     st.subheader("Analysis")
+    
+    # Check data maturity
+    total_days = len(set([l["timestamp"][:10] for l in logs]))
+    if total_days < 30:
+        st.info(f"📊 **Data Maturity: Learning Phase ({total_days}/30 days)**. Patterns are emerging, but keep logging to increase confidence and filter out coincidences.")
+
     scores = run_analysis(logs)
 
     if not scores:

@@ -573,7 +573,7 @@ with tab4:
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
-                # Risk Calculation
+                # Risk Calculation (Untouched logic)
                 trigger_scores = [analysis_scores.get(c, 0) for c in comps]
                 if trigger_scores:
                     max_score = max(trigger_scores)
@@ -597,59 +597,66 @@ with tab4:
                     color = "#34C759"
                     status = "LIKELY SAFE"
 
+                # Switched to a compact horizontal flex layout
                 st.markdown(f"""
-                <div style="background: {color}15; border: 2px solid {color}; 
-                            border-radius: 16px; padding: 20px 16px; text-align: center; 
-                            margin: 12px 0;">
-                    <h2 style="margin: 0 0 6px 0; color: {color}; font-weight: 600; font-size: 1.4rem;">
+                <div style="background: {color}15; border: 1px solid {color}; 
+                            border-radius: 12px; padding: 12px 16px; display: flex; 
+                            justify-content: space-between; align-items: center; 
+                            margin: 8px 0;">
+                    <h2 style="margin: 0; color: {color}; font-weight: 700; font-size: 1.25rem;">
                         {status}
                     </h2>
-                    <p style="font-size: 2.2rem; font-weight: 700; margin: 4px 0 0 0; color: white;">
-                        {final_risk}<span style="font-size: 1.1rem; opacity: 0.75;">/100</span>
+                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0; color: white;">
+                        {final_risk}<span style="font-size: 0.9rem; opacity: 0.75;">/100</span>
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # === COMPACT CHEMICAL BREAKDOWN ===
-                st.markdown("**Chemical Breakdown**")
+                # === COMPACT CHEMICAL BREAKDOWN (TOP 5) ===
+                # Sort and slice to get only the top 5
+                top_5_comps = sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True)[:5]
 
-                for c in sorted(comps, key=lambda x: analysis_scores.get(x, 0), reverse=True):
-                    score = analysis_scores.get(c, 0)
+                # Tucked inside an expander
+                with st.expander("🧪 View Chemical Breakdown (Top 5)"):
+                    for c in top_5_comps:
+                        score = analysis_scores.get(c, 0)
 
-                    if score >= 60:
-                        bar_color = "#FF3B30"
-                        level = "High"
-                    elif score >= 45:
-                        bar_color = "#FF9500"
-                        level = "Moderate"
-                    elif score >= 25:
-                        bar_color = "#FFCC00"
-                        level = "Low"
-                    else:
-                        bar_color = "#34C759"
-                        level = "Minimal"
+                        if score >= 60:
+                            bar_color = "#FF3B30"
+                            level = "High"
+                        elif score >= 45:
+                            bar_color = "#FF9500"
+                            level = "Moderate"
+                        elif score >= 25:
+                            bar_color = "#FFCC00"
+                            level = "Low"
+                        else:
+                            bar_color = "#34C759"
+                            level = "Minimal"
 
-                    st.markdown(f"""
-                    <div style="background: #1F1F1F; border-radius: 12px; padding: 12px 16px; 
-                                margin-bottom: 8px; border-left: 4px solid {bar_color};">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; color: white; font-size: 1.02rem;">{c}</div>
-                                <div style="font-size: 0.82rem; color: #aaaaaa;">{level} Risk</div>
+                        # Replaced #1F1F1F with a style-matching {bar_color}10 tint
+                        # Reduced padding/margins for better compactness
+                        st.markdown(f"""
+                        <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 12px; 
+                                    margin-bottom: 6px; border-left: 4px solid {bar_color};">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; color: white; font-size: 0.95rem;">{c}</div>
+                                    <div style="font-size: 0.75rem; color: #aaaaaa; margin-top: 2px;">{level} Risk</div>
+                                </div>
+                                <div style="text-align: right; min-width: 60px;">
+                                    <span style="font-size: 1.1rem; font-weight: 600; color: {bar_color};">{score}</span>
+                                    <span style="font-size: 0.75rem; color: #888;">/100</span>
+                                </div>
                             </div>
-                            <div style="text-align: right; min-width: 70px;">
-                                <span style="font-size: 1.25rem; font-weight: 600; color: {bar_color};">{score}</span>
-                                <span style="font-size: 0.8rem; color: #888;">/100</span>
+                            <div style="margin-top: 6px; height: 3px; background: #333; border-radius: 10px; overflow: hidden;">
+                                <div style="width: {score}%; height: 100%; background: {bar_color};"></div>
                             </div>
                         </div>
-                        <div style="margin-top: 8px; height: 4px; background: #333; border-radius: 10px; overflow: hidden;">
-                            <div style="width: {score}%; height: 100%; background: {bar_color};"></div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
 
                 # Compact Recommendation
-                st.divider()
+                st.markdown("<hr style='margin: 16px 0;'/>", unsafe_allow_html=True)
                 if final_risk >= 60:
                     st.error("**High caution** — Consider avoiding this meal.")
                 elif final_risk >= 40:

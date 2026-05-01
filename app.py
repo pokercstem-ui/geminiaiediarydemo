@@ -102,7 +102,7 @@ def analyze_meal_with_ai(text):
     try:
         response = client.chat.completions.create(
             model="default",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.0
         )
 

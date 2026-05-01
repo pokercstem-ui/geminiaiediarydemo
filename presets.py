@@ -8,7 +8,6 @@ def get_preset_logs():
     logs = []
 
     def add_meal(days_ago, hour, content, ingredients, chem_comp):
-        # Add a randomized minute to make the timestamp unique
         minute = random.randint(0, 59)
         t = base_date - timedelta(days=days_ago) + timedelta(hours=hour, minutes=minute)
         logs.append({
@@ -20,7 +19,6 @@ def get_preset_logs():
         })
 
     def add_flare(days_ago, hour, severity, symptoms, areas):
-        # Add a randomized minute to make the timestamp unique
         minute = random.randint(0, 59)
         t = base_date - timedelta(days=days_ago) + timedelta(hours=hour, minutes=minute)
         logs.append({
@@ -32,7 +30,7 @@ def get_preset_logs():
         })
 
     # ==========================================
-    # WEEK 1 & 3: Modified with Vitamin E Protective Pattern
+    # Standard Week (Mixed - some triggers with partial Vitamin E protection)
     # ==========================================
     def generate_standard_week(start_day_offset):
         d = start_day_offset
@@ -68,37 +66,87 @@ def get_preset_logs():
         add_meal(d+3, 13, "Char Siu Rice + Small Avocado", ["Pork", "Char Siu Sauce", "Egg", "Rice", "Avocado"], {"Pork": ["Tyramine"], "Avocado": ["Vitamin E"]})
         add_meal(d+3, 16, "Shredded Dried Squid (Snack)", ["Squid"], {"Squid": ["Histamine", "Tyramine"]})
         add_meal(d+3, 19, "Pork Ribs with Black Bean Sauce", ["Pork Ribs", "Black Bean Sauce", "Rice"], {"Pork Ribs": ["Tyramine"], "Black Bean Sauce": ["Tyramine", "Putrescine"]})
-        add_flare(d+3, 23, 6, ["Itching", "Dryness"], ["Arms", "Elbows"])  # Reduced severity due to some Vitamin E
+        add_flare(d+3, 23, 6, ["Itching", "Dryness"], ["Arms", "Elbows"])   # Reduced severity due to Vitamin E
         
-        # Continue pattern with Vitamin E protection reducing flare severity/frequency
-        # Days 5-7 follow similar protective pattern...
+        # Day 5 (Safe + Vitamin E)
+        add_meal(d+4, random.randint(7,9), "Avocado Smoothie Bowl with Sunflower Seeds", 
+                ["Avocado", "Banana", "Sunflower Seeds", "Oats"], 
+                {"Avocado": ["Vitamin E"], "Sunflower Seeds": ["Vitamin E"]})
+        add_meal(d+4, random.randint(12,14), "Grilled Fish with Spinach Salad", 
+                ["Grass Carp", "Spinach", "Pine Nuts"], 
+                {"Grass Carp": ["Parvalbumin"], "Spinach": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        add_meal(d+4, 16, "Almonds & Pear (Snack)", ["Almonds", "Pear"], {"Almonds": ["Vitamin E"]})
+        add_meal(d+4, 19, "Chicken Stir-fry with Choy Sum & Avocado", 
+                ["Chicken", "Choy Sum", "Avocado", "Rice"], 
+                {"Chicken": ["Tyramine"], "Choy Sum": ["Salicylic Acid"], "Avocado": ["Vitamin E"]})
+        
+        # Day 6 (Mild trigger with strong Vitamin E protection)
+        add_meal(d+5, 8, "Cheese Toast with Almond Butter", ["Bread", "Cheese", "Almond Butter"], {"Bread": ["Gliadin"], "Almond Butter": ["Vitamin E"]})
+        add_meal(d+5, 13, "Beef Fried Rice with Extra Spinach", ["Beef", "Rice", "Spinach", "Pine Nuts"], {"Beef": ["Histamine"], "Spinach": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        add_meal(d+5, 16, "Large Handful Sunflower Seeds", ["Sunflower Seeds"], {"Sunflower Seeds": ["Vitamin E"]})
+        add_meal(d+5, 19, "Salmon with Swiss Chard & Pine Nuts", ["Salmon", "Swiss Chard", "Pine Nuts"], {"Swiss Chard": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        
+        # Day 7 (Safe + Heavy Vitamin E)
+        add_meal(d+6, random.randint(7,9), "Oatmeal with Almonds & Kiwi", ["Oats", "Almonds", "Kiwi"], {"Almonds": ["Vitamin E"]})
+        add_meal(d+6, random.randint(12,14), "Tofu Vegetable Stir-fry with Avocado", ["Tofu", "Choy Sum", "Spinach", "Avocado"], {"Spinach": ["Vitamin E"], "Avocado": ["Vitamin E"]})
+        add_meal(d+6, 16, "Pine Nuts & Apple (Snack)", ["Pine Nuts", "Apple"], {"Pine Nuts": ["Vitamin E"]})
+        add_meal(d+6, 19, "Steamed Fish with Asparagus & Sunflower Seeds", ["Grass Carp", "Asparagus", "Sunflower Seeds"], {"Sunflower Seeds": ["Vitamin E"]})
 
     # ==========================================
-    # WEEK 2: Heavy Vitamin E Protective Pattern
+    # Heavy Vitamin E Protective Week (Minimal/No flares)
     # ==========================================
     def generate_vitamin_e_week(start_day_offset):
         d = start_day_offset
         
-        # Day 8 (Safe + Vitamin E HEAVY)
-        add_meal(d+0, 8, "Avocado Toast with Sunflower Seeds", ["Avocado", "Whole Wheat Bread", "Sunflower Seeds"], {"Avocado": ["Vitamin E"], "Sunflower Seeds": ["Vitamin E"]})
-        add_meal(d+0, 13, "Spinach & Pine Nut Stir-fry with Rice", ["Spinach", "Pine Nuts", "Rice"], {"Spinach": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        # Day 1 (Heavy Vitamin E)
+        add_meal(d+0, random.randint(7,9), "Avocado Toast with Sunflower Seeds", ["Avocado", "Whole Wheat Bread", "Sunflower Seeds"], {"Avocado": ["Vitamin E"], "Sunflower Seeds": ["Vitamin E"]})
+        add_meal(d+0, random.randint(12,14), "Spinach & Pine Nut Stir-fry with Rice", ["Spinach", "Pine Nuts", "Rice"], {"Spinach": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
         add_meal(d+0, 16, "Almonds + Kiwi (Snack)", ["Almonds", "Kiwi"], {"Almonds": ["Vitamin E"]})
-        add_meal(d+0, 19, "Salmon with Swiss Chard", ["Salmon", "Swiss Chard"], {"Swiss Chard": ["Vitamin E"]})
+        add_meal(d+0, 19, "Grilled Salmon with Swiss Chard", ["Salmon", "Swiss Chard"], {"Swiss Chard": ["Vitamin E"]})
         
-        # Day 9 (Trigger but Vitamin E PROTECTS - NO FLARE)
+        # Day 2 (Trigger foods but Vitamin E PROTECTS → NO FLARE)
         add_meal(d+1, 8, "Satay Beef Noodles + Avocado Side", ["Beef", "Wheat Noodles", "Satay Sauce", "Avocado"], {"Beef": ["Histamine"], "Avocado": ["Vitamin E"]})
         add_meal(d+1, 13, "Baked Pork Chop Rice with Tomato + Pine Nuts", ["Pork Chop", "Tomato", "Rice", "Pine Nuts"], {"Pork Chop": ["Tyramine"], "Pine Nuts": ["Vitamin E"]})
         add_meal(d+1, 16, "Large Handful Almonds (Snack)", ["Almonds"], {"Almonds": ["Vitamin E"]})
-        add_meal(d+1, 19, "Mapo Tofu with Extra Spinach", ["Tofu", "Minced Pork", "Chili Bean Paste", "Spinach"], {"Minced Pork": ["Tyramine"], "Spinach": ["Vitamin E"]})
-        # NO FLARE - Vitamin E protection working!
+        add_meal(d+1, 19, "Mapo Tofu with Extra Spinach & Avocado", ["Tofu", "Minced Pork", "Chili Bean Paste", "Spinach", "Avocado"], {"Minced Pork": ["Tyramine"], "Spinach": ["Vitamin E"], "Avocado": ["Vitamin E"]})
+        
+        # Day 3 (Safe + Very Heavy Vitamin E)
+        add_meal(d+2, random.randint(7,9), "Almond Butter Overnight Oats with Sunflower Seeds", ["Oats", "Almond Butter", "Sunflower Seeds"], {"Almond Butter": ["Vitamin E"], "Sunflower Seeds": ["Vitamin E"]})
+        add_meal(d+2, random.randint(12,14), "Salmon Salad with Spinach, Avocado & Pine Nuts", ["Salmon", "Spinach", "Avocado", "Pine Nuts"], {"Spinach": ["Vitamin E"], "Avocado": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        add_meal(d+2, 16, "Mixed Nuts (Almonds + Pine Nuts)", ["Almonds", "Pine Nuts"], {"Almonds": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        add_meal(d+2, 19, "Steamed Chicken with Choy Sum & Swiss Chard", ["Chicken", "Choy Sum", "Swiss Chard"], {"Swiss Chard": ["Vitamin E"]})
 
-        # Continue with Vitamin E consistently preventing/reducing flares...
+        # Day 4 (Trigger with strong protection)
+        add_meal(d+3, 8, "Pineapple Bun with Almond Butter", ["Wheat Flour", "Butter", "Almond Butter"], {"Wheat Flour": ["Gliadin"], "Almond Butter": ["Vitamin E"]})
+        add_meal(d+3, 13, "Char Siu Rice with Large Avocado Side", ["Pork", "Char Siu Sauce", "Rice", "Avocado"], {"Pork": ["Tyramine"], "Avocado": ["Vitamin E"]})
+        add_meal(d+3, 16, "Sunflower Seeds & Kiwi", ["Sunflower Seeds", "Kiwi"], {"Sunflower Seeds": ["Vitamin E"]})
+        add_meal(d+3, 19, "Pork Ribs with Black Bean Sauce + Extra Spinach", ["Pork Ribs", "Black Bean Sauce", "Rice", "Spinach"], {"Pork Ribs": ["Tyramine"], "Black Bean Sauce": ["Tyramine"], "Spinach": ["Vitamin E"]})
+
+        # Day 5
+        add_meal(d+4, random.randint(7,9), "Avocado & Almond Smoothie", ["Avocado", "Almond Milk", "Spinach"], {"Avocado": ["Vitamin E"], "Spinach": ["Vitamin E"]})
+        add_meal(d+4, random.randint(12,14), "Fish with Asparagus & Pine Nuts", ["Grass Carp", "Asparagus", "Pine Nuts"], {"Pine Nuts": ["Vitamin E"]})
+        add_meal(d+4, 16, "Handful of Almonds", ["Almonds"], {"Almonds": ["Vitamin E"]})
+        add_meal(d+4, 19, "Vegetable Stir-fry with Swiss Chard & Sunflower Seeds", ["Choy Sum", "Swiss Chard", "Sunflower Seeds"], {"Swiss Chard": ["Vitamin E"], "Sunflower Seeds": ["Vitamin E"]})
+
+        # Day 6 (Trigger attempt but protected)
+        add_meal(d+5, 8, "Shrimp Dumplings with Avocado", ["Shrimp", "Wheat Wrapper", "Avocado"], {"Shrimp": ["Tropomyosin", "Histamine"], "Avocado": ["Vitamin E"]})
+        add_meal(d+5, 13, "Beef Noodles + Large Spinach Portion", ["Beef", "Wheat Noodles", "Spinach"], {"Beef": ["Histamine"], "Spinach": ["Vitamin E"]})
+        add_meal(d+5, 16, "Pine Nuts Snack", ["Pine Nuts"], {"Pine Nuts": ["Vitamin E"]})
+        add_meal(d+5, 19, "Salmon Bowl with Avocado & Sunflower Seeds", ["Salmon", "Avocado", "Sunflower Seeds"], {"Avocado": ["Vitamin E"], "Sunflower Seeds": ["Vitamin E"]})
+
+        # Day 7 (Safe + Vitamin E recovery)
+        add_meal(d+6, random.randint(7,9), "Oatmeal with Almond Butter & Kiwi", ["Oats", "Almond Butter", "Kiwi"], {"Almond Butter": ["Vitamin E"]})
+        add_meal(d+6, random.randint(12,14), "Tofu & Vegetable Medley with Pine Nuts", ["Tofu", "Spinach", "Swiss Chard", "Pine Nuts"], {"Spinach": ["Vitamin E"], "Swiss Chard": ["Vitamin E"], "Pine Nuts": ["Vitamin E"]})
+        add_meal(d+6, 16, "Almonds & Apple", ["Almonds", "Apple"], {"Almonds": ["Vitamin E"]})
+        add_meal(d+6, 19, "Steamed Fish with Choy Sum & Avocado", ["Grass Carp", "Choy Sum", "Avocado"], {"Avocado": ["Vitamin E"]})
 
     # ==========================================
-    # Execute with Vitamin E Protective Pattern
+    # Generate 3 weeks (most recent first)
     # ==========================================
-    generate_standard_week(14)      # Week 3 (Vitamin E protective baseline)
-    generate_vitamin_e_week(7)       # Week 2 (Heavy Vitamin E protection)
-    generate_standard_week(0)       # Week 1 (Mixed pattern)
+    generate_standard_week(0)      # Week 1 - Most recent
+    generate_vitamin_e_week(7)     # Week 2 - Heavy Vitamin E protection
+    generate_standard_week(14)     # Week 3 - Older baseline
 
+    # Return sorted by timestamp (newest first)
     return sorted(logs, key=lambda x: x["timestamp"], reverse=True)
+

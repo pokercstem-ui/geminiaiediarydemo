@@ -103,6 +103,7 @@ def analyze_meal_with_ai(text):
         response = client.chat.completions.create(
             model="default",
             messages=[{"role": "user", "content": prompt}]
+            temperature=0.0
         )
 
         result_text = response.choices[0].message.content
@@ -130,9 +131,8 @@ def get_chemical_info_from_ai(chemical_name):
         
     prompt = f"""
     Briefly explain what '{chemical_name}' is in the context of food. 
-    1. What is its normal biological or chemical role?
-    2. Where is it commonly found?
-    3. How might it contribute to inflammation, intolerances, or eczema flare-ups?
+    1. Where is it commonly found?
+    3. How is it related to eczema flare-ups?
     Format the response clearly using markdown bullet points or short paragraphs. Keep it concise but informative.
     """
     

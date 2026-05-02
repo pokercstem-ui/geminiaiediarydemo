@@ -567,7 +567,7 @@ with tab3:
             with col_html:
                 st.markdown(f"""
                 <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 13px; 
-                            margin-bottom: 2px; border-left: 4px solid {bar_color};">
+                            margin-bottom: 10px; border-left: 4px solid {bar_color};">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="flex: 1;">
                             <div style="font-weight: 600; font-size: 0.95rem;">{s['component']}</div>

@@ -97,12 +97,12 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    # 1. Try to load existing data first
+    # 1. Try to load existing data first so we don't overwrite user entries
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
                 existing_logs = json.load(f)
-                # If the file contains valid data (even an empty list from "Clear History"), return it
+                # If the file contains valid data, return it sorted by time
                 if isinstance(existing_logs, list):
                     return sorted(existing_logs, key=lambda x: x["timestamp"], reverse=True)
         except (json.JSONDecodeError, FileNotFoundError):
@@ -401,11 +401,9 @@ def run_analysis(logs):
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
 # --- LOAD DATA TO SESSION ---
-# Because load_data is cached, this safely loads from the file.
-# When you log a new meal/flare, you clear the cache, forcing it to read the updated JSON.
 st.session_state.logs = load_data(DATA_FILE)
-
 logs = st.session_state.logs
+
 # --- SIDEBAR & TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 
@@ -443,7 +441,7 @@ with tab1:
                             "timestamp": meal_datetime.isoformat()
                         })
                     with open(DATA_FILE, "w") as f:
-                        json.dump(st.session_state.logs, f)
+                        json.dump(st.session_state.logs, f, indent=2)
                     
                     st.cache_data.clear() 
                     st.success(f"Meal logged at {meal_datetime.strftime('%Y-%m-%d %H:%M')}!")
@@ -478,7 +476,7 @@ with tab1:
                         "timestamp": flare_datetime.isoformat()
                     })
                     with open(DATA_FILE, "w") as f:
-                        json.dump(st.session_state.logs, f)
+                        json.dump(st.session_state.logs, f, indent=2)
                     
                     st.cache_data.clear() 
                     st.success(f"Flare-up logged at {flare_datetime.strftime('%Y-%m-%d %H:%M')}.")

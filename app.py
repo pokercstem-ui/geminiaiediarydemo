@@ -64,22 +64,54 @@ st.markdown(
         gap: 0 !important;
     }
 
+    /* 4. Tab Button Formatting (Stacked Icons) */
     div[data-testid="stTabs"] [role="tablist"] > button {
         flex: 1 !important;
         justify-content: center !important;
-        padding: 1.2rem 0 !important;
+        padding: 0.6rem 0 !important;
         margin: 0 !important;
-        font-weight: 600 !important;
+        opacity: 0.45 !important; /* iOS inactive opacity */
+        transition: opacity 0.2s, background-color 0.2s !important;
     }
+    
+    div[data-testid="stTabs"] [role="tablist"] > button[aria-selected="true"] {
+        opacity: 1 !important;
+        background-color: rgba(128, 128, 128, 0.05) !important; 
+    }
+
+    /* Stack the Material icon on top of the text */
+    div[data-testid="stTabs"] [role="tablist"] > button p {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 4px !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        margin: 0 !important;
+        line-height: 1 !important;
+    }
+
+    /* Increase the icon size */
+    div[data-testid="stTabs"] [role="tablist"] > button span.material-symbols-rounded {
+        font-size: 1.6rem !important;
+        margin: 0 !important;
+    }
+
+    /* 5. Themed Icon Colors */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(1) span.material-symbols-rounded { color: #007AFF !important; } /* Blue for Input */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(2) span.material-symbols-rounded { color: #34C759 !important; } /* Green for History */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(3) span.material-symbols-rounded { color: #5856D6 !important; } /* Indigo for Analysis */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(4) span.material-symbols-rounded { color: #FF9500 !important; } /* Orange for Forecast */
 
     div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
         top: 0 !important;
         bottom: auto !important;
         background-color: var(--primary-color) !important;
         border-radius: 0 0 4px 4px !important;
+        height: 3px !important;
     }
 
-    /* 4. Tactile Buttons (Squircle + Springy Scale) */
+    /* 6. Tactile Buttons (Squircle + Springy Scale) */
     .stButton > button, .stDownloadButton > button {
         border-radius: 24px !important;
         border: 1px solid rgba(128,128,128,0.2) !important;
@@ -90,18 +122,15 @@ st.markdown(
         font-weight: 600 !important;
     }
     
-    /* The 0.98 scale transform hover/active state */
     .stButton > button:active, .stDownloadButton > button:active {
         transform: scale(0.96) !important; 
         background: rgba(128,128,128,0.15) !important;
     }
 
-    /* Thick Rounded Sliders */
     .stSlider > div > div > div > div {
         border-radius: 12px !important;
     }
 
-    /* Standardized padding for emoji buttons */
     .stButton>button {padding: 0.3rem 0.6rem;} 
     </style>
     """,
@@ -440,10 +469,16 @@ st.session_state.logs = load_data(DATA_FILE)
 logs = st.session_state.logs
 
 # --- SIDEBAR & TABS ---
-tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
+# USING STREAMLIT MATERIAL ICONS INSTEAD OF EMOJIS
+tab1, tab2, tab3, tab4 = st.tabs([
+    ":material/edit_square: Input", 
+    ":material/history: History", 
+    ":material/analytics: Analysis", 
+    ":material/online_prediction: Forecast"
+])
 
 with tab1:
-    st.markdown("### 📝 Log Activity")
+    st.markdown("### :material/edit_square: Log Activity")
     left, right = st.columns(2)
 
     with left:
@@ -519,7 +554,7 @@ with tab1:
                     st.rerun()
 
 with tab2:
-    st.markdown("### 📋 History")
+    st.markdown("### :material/history: History")
     if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.logs = []
         with open(DATA_FILE, "w") as f:
@@ -566,7 +601,7 @@ with tab2:
             """, unsafe_allow_html=True)
 
 with tab3:
-    st.markdown("### 📊 Analysis")
+    st.markdown("### :material/analytics: Analysis")
     
     total_days = len(set([l["timestamp"][:10] for l in logs]))
     if total_days < 30:
@@ -602,7 +637,7 @@ with tab3:
             col_html, col_btn = st.columns([0.88, 0.12], vertical_alignment="center")
             
             with col_html:
-                # GLASSMORPHISM: Added border-radius 24px, backdrop filter, and increased gap
+                # GLASSMORPHISM: Added border-radius 24px, backdrop filter, and maintained the 10px gap
                 st.markdown(f"""
                 <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 12px 16px; margin-bottom: 10px; border-left: 4px solid {bar_color}; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -663,7 +698,7 @@ with tab3:
                     st.markdown(f"<div style='font-size: 0.95rem; opacity: 0.8; margin-left: 16px; margin-bottom: 4px;'>• {item}</div>", unsafe_allow_html=True)
 
 with tab4:
-    st.markdown("### 🔮 Risk Forecast")
+    st.markdown("### :material/online_prediction: Risk Forecast")
     st.markdown("**Check your meal before eating**")
 
     with st.form("predict_form"):

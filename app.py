@@ -138,7 +138,7 @@ def analyze_meal_with_ai(text):
         f"- Identify specific additives/preservatives (e.g., 'Sodium Nitrite', 'Sodium Benzoate', 'Monosodium Glutamate', 'Tartrazine', 'Sulfites').\n"
         f"- Identify specific carbohydrates/sugars if they act as triggers (e.g., 'Fructans', 'Galacto-oligosaccharides', 'Fructose').\n\n"
         f"Do NOT include generic macro/micronutrients like 'Calories', 'Protein', 'Vitamins', 'Manganese', 'Antioxidants', or 'Fat' unless they are specific known triggers.\n"
-        f"Make it concise, don't add if-cases, think about the general case. \n"
+        f"Make it concise, don't add if-cases, think about the general case. You should select at most 4 chemicals for each ingredient according to those which are more abundant or cause more serious reactions. \n"
         f"Return ONLY a valid JSON object matching this structure: "
         f'{{"ingredients": ["Tomato"], "chemical_composition": {{"Tomato": ["Solanine", "Tomatine", "Histamine", "Salicylic Acid"]}}}}'
     )

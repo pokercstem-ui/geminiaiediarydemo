@@ -265,6 +265,41 @@ def extract_chemicals_from_meal(meal):
                 chemicals.add(c.strip().title())
     return list(chemicals)
 
+
+# ==========================================
+# 🧠 NEW: INGREDIENT MEMORY TO PREVENT FLUCTUATION
+# ==========================================
+def enforce_chemical_consistency(analysis_data, logs):
+    """Ensures that once an ingredient is analyzed, its chemicals NEVER change in future logs."""
+    master_dict = {}
+    
+    # Build a memory bank of all past ingredients (reading oldest to newest)
+    for l in reversed(logs):
+        if l["type"] == "meal":
+            for ing, chems in l.get("chemical_composition", {}).items():
+                master_dict[ing.strip().title()] = chems
+                
+    final_composition = {}
+    final_ingredients = []
+    
+    for ing in analysis_data.get("ingredients", []):
+        final_ingredients.append(ing.strip().title())
+        
+    for ing, chems in analysis_data.get("chemical_composition", {}).items():
+        standard_ing = ing.strip().title()
+        
+        # If we have seen this ingredient before, OVERRIDE the AI's new output
+        if standard_ing in master_dict:
+            final_composition[standard_ing] = master_dict[standard_ing]
+        else:
+            final_composition[standard_ing] = chems
+            
+    return {
+        "ingredients": final_ingredients,
+        "chemical_composition": final_composition
+    }
+
+
 # --- POP-UP DIALOG FUNCTION ---
 @st.dialog("🔬 Chemical Profile")
 def show_chemical_profile(chemical_name, occurrences, hit_rate, score):
@@ -469,7 +504,6 @@ st.session_state.logs = load_data(DATA_FILE)
 logs = st.session_state.logs
 
 # --- SIDEBAR & TABS ---
-# USING STREAMLIT MATERIAL ICONS INSTEAD OF EMOJIS
 tab1, tab2, tab3, tab4 = st.tabs([
     ":material/edit_square: Input", 
     ":material/history: History", 
@@ -483,7 +517,6 @@ with tab1:
 
     with left:
         with st.container(border=True):
-            # GLASSMORPHISM applied to headers
             st.markdown("""
                 <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 12px 16px; border-radius: 20px; border: 1px solid rgba(128,128,128,0.15); margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">🍎 Log a Meal</h3>
@@ -503,6 +536,8 @@ with tab1:
                 if save_meal and meal_txt:
                     with st.spinner("AI is extracting chemical composition..."):
                         analysis_data = analyze_meal_with_ai(meal_txt)
+                        # --- MEMORY APPLIED HERE ---
+                        analysis_data = enforce_chemical_consistency(analysis_data, st.session_state.logs)
                         
                     st.session_state.logs.insert(0, {
                             "type": "meal",
@@ -570,7 +605,6 @@ with tab2:
             ingredients = l.get("ingredients", [])
             chem_comp = l.get("chemical_composition", {})
             
-            # GLASSMORPHISM: Frosted glass, squircle border-radius, and thin translucent border
             st.markdown(f"""
             <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-left: 4px solid #34C759; border-radius: 24px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                 <div style="font-weight: 600; font-size: 1.05rem;">🍴 {l['content']}</div>
@@ -637,7 +671,6 @@ with tab3:
             col_html, col_btn = st.columns([0.88, 0.12], vertical_alignment="center")
             
             with col_html:
-                # GLASSMORPHISM: Added border-radius 24px, backdrop filter, and maintained the 10px gap
                 st.markdown(f"""
                 <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 12px 16px; margin-bottom: 10px; border-left: 4px solid {bar_color}; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -669,7 +702,6 @@ with tab3:
             with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
                 ai_review = ai_review_analysis(logs, scores)
 
-            # GLASSMORPHISM applied to the review cards
             st.markdown(f"""
             <div style="display: flex; gap: 16px; margin-bottom: 20px;">
                 <div style="flex: 1; background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
@@ -712,6 +744,9 @@ with tab4:
     if check_btn and predict_txt:
         with st.spinner("Analyzing against your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
+            # --- MEMORY APPLIED HERE ---
+            analysis_data = enforce_chemical_consistency(analysis_data, st.session_state.logs)
+            
             comps = extract_chemicals_from_meal(analysis_data)
             analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
 

@@ -9,36 +9,54 @@ from PIL import Image
 from presets import get_preset_logs
 
 # --- PAGE SETUP ---
-# Load the uploaded image for the app icon
 try:
     icon = Image.open("ed01.jpg")
 except FileNotFoundError:
-    icon = "🧩" # Fallback if image isn't found during testing
+    icon = "🧩" 
 
 st.set_page_config(page_title="E-diary", page_icon=icon)
 
+# ==========================================
+# 🍎 HIGH-END iOS AESTHETIC CSS INJECTION
+# ==========================================
 st.markdown(
     """
     <style>
-    /* Prevent content from hiding behind the bottom nav bar */
+    /* 1. San Francisco System Font Stack */
+    html, body, [class*="css"] {
+        font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    }
+
+    /* 2. Vibrant Mesh Gradient Background */
+    .stApp {
+        background-color: var(--background-color);
+        background-image: 
+            radial-gradient(at 0% 0%, rgba(52, 199, 89, 0.08) 0px, transparent 50%),
+            radial-gradient(at 100% 0%, rgba(255, 59, 48, 0.08) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(0, 122, 255, 0.08) 0px, transparent 50%),
+            radial-gradient(at 0% 100%, rgba(255, 149, 0, 0.08) 0px, transparent 50%);
+        background-attachment: fixed;
+    }
+
     .block-container {
         padding-top: 2rem !important;
         padding-bottom: 120px !important; 
     }
     
-    /* TARGET ONLY THE TAB BUTTONS WRAPPER, NOT THE CONTENT PANELS */
+    /* 3. Glassmorphism Bottom Nav (Frosted Glass) */
     div[data-testid="stTabs"] > div > div:first-of-type {
         position: fixed !important;
         bottom: 0 !important;
         left: 0 !important;
         right: 0 !important;
-        background-color: var(--secondary-background-color) !important;
+        background-color: rgba(128, 128, 128, 0.05) !important;
+        backdrop-filter: blur(25px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
         z-index: 999999 !important;
-        border-top: 1px solid rgba(128,128,128,0.2) !important;
+        border-top: 1px solid rgba(128,128,128,0.15) !important;
         padding-bottom: max(env(safe-area-inset-bottom), 15px) !important;
     }
 
-    /* Force the tablist to stretch full width and behave like a flexbox */
     div[data-testid="stTabs"] [role="tablist"] {
         display: flex !important;
         width: 100% !important;
@@ -46,24 +64,45 @@ st.markdown(
         gap: 0 !important;
     }
 
-    /* Divide into 4 equal buttons */
     div[data-testid="stTabs"] [role="tablist"] > button {
         flex: 1 !important;
         justify-content: center !important;
-        padding: 1rem 0 !important;
+        padding: 1.2rem 0 !important;
         margin: 0 !important;
+        font-weight: 600 !important;
     }
 
-    /* Move the active highlight indicator to the top of the tab */
     div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
         top: 0 !important;
         bottom: auto !important;
         background-color: var(--primary-color) !important;
+        border-radius: 0 0 4px 4px !important;
     }
 
-    .big-title {font-size: 2.2rem; font-weight: 800; margin-bottom: 0.2rem;}
-    .subtitle {font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;}
-    .stButton>button {padding: 0.2rem 0.5rem;} 
+    /* 4. Tactile Buttons (Squircle + Springy Scale) */
+    .stButton > button, .stDownloadButton > button {
+        border-radius: 24px !important;
+        border: 1px solid rgba(128,128,128,0.2) !important;
+        background: rgba(128,128,128,0.05) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s !important;
+        font-weight: 600 !important;
+    }
+    
+    /* The 0.98 scale transform hover/active state */
+    .stButton > button:active, .stDownloadButton > button:active {
+        transform: scale(0.96) !important; 
+        background: rgba(128,128,128,0.15) !important;
+    }
+
+    /* Thick Rounded Sliders */
+    .stSlider > div > div > div > div {
+        border-radius: 12px !important;
+    }
+
+    /* Standardized padding for emoji buttons */
+    .stButton>button {padding: 0.3rem 0.6rem;} 
     </style>
     """,
     unsafe_allow_html=True
@@ -97,22 +136,18 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    # 1. Try to load existing data first so we don't overwrite user entries
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
                 existing_logs = json.load(f)
-                # If the file contains valid data, return it sorted by time
                 if isinstance(existing_logs, list):
                     return sorted(existing_logs, key=lambda x: x["timestamp"], reverse=True)
         except (json.JSONDecodeError, FileNotFoundError):
             pass
 
-    # 2. If no data exists (first run ever), load presets from presets.py
     presets = get_preset_logs()
     final_logs = sorted(presets, key=lambda x: x["timestamp"], reverse=True)
 
-    # Save the presets to the file so they become the "existing_logs" next time
     with open(filepath, "w") as f:
         json.dump(final_logs, f, indent=2)
 
@@ -413,9 +448,10 @@ with tab1:
 
     with left:
         with st.container(border=True):
+            # GLASSMORPHISM applied to headers
             st.markdown("""
-                <div style="background: rgba(128,128,128,0.1); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px;">
-                    <h3 style="margin: 0; font-size: 1.1rem;">🍎 Log a Meal</h3>
+                <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 12px 16px; border-radius: 20px; border: 1px solid rgba(128,128,128,0.15); margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700;">🍎 Log a Meal</h3>
                 </div>
             """, unsafe_allow_html=True)
             with st.form("meal_form", clear_on_submit=True):
@@ -450,8 +486,8 @@ with tab1:
     with right:
         with st.container(border=True):
             st.markdown("""
-                <div style="background: #FF3B3015; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #FF3B30;">
-                    <h3 style="margin: 0; color: #FF3B30; font-size: 1.1rem;">🚨 Log a Flare-up</h3>
+                <div style="background: rgba(255, 59, 48, 0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 12px 16px; border-radius: 20px; border: 1px solid rgba(255, 59, 48, 0.2); margin-bottom: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <h3 style="margin: 0; color: #FF3B30; font-size: 1.1rem; font-weight: 700;">🚨 Log a Flare-up</h3>
                 </div>
             """, unsafe_allow_html=True)
             with st.form("flare_form", clear_on_submit=True):
@@ -499,10 +535,11 @@ with tab2:
             ingredients = l.get("ingredients", [])
             chem_comp = l.get("chemical_composition", {})
             
+            # GLASSMORPHISM: Frosted glass, squircle border-radius, and thin translucent border
             st.markdown(f"""
-            <div style="background: rgba(128,128,128,0.1); border-left: 4px solid #34C759; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="font-weight: 600; font-size: 1rem;">🍴 {l['content']}</div>
-                <div style="font-size: 0.8rem; opacity: 0.7;">{t}</div>
+            <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-left: 4px solid #34C759; border-radius: 24px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                <div style="font-weight: 600; font-size: 1.05rem;">🍴 {l['content']}</div>
+                <div style="font-size: 0.85rem; opacity: 0.6;">{t}</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -518,13 +555,13 @@ with tab2:
             areas = ", ".join(l.get("affected_areas", [])) or "Not specified"
 
             st.markdown(f"""
-            <div style="background: #FF3B3015; border-left: 4px solid #FF3B30; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; flex-direction: column;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <div style="font-weight: 700; color: #FF3B30; font-size: 1rem;">🚨 Flare-up (Severity {l.get('severity', 0)})</div>
-                    <div style="font-size: 0.8rem; opacity: 0.7;">{t}</div>
+            <div style="background: rgba(255, 59, 48, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 59, 48, 0.15); border-left: 4px solid #FF3B30; border-radius: 24px; padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <div style="font-weight: 700; color: #FF3B30; font-size: 1.05rem;">🚨 Flare-up (Severity {l.get('severity', 0)})</div>
+                    <div style="font-size: 0.85rem; opacity: 0.6;">{t}</div>
                 </div>
-                <div style="font-size: 0.85rem; opacity: 0.8;"><b>Symptoms:</b> {symptoms}</div>
-                <div style="font-size: 0.85rem; opacity: 0.8;"><b>Areas:</b> {areas}</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;"><b>Symptoms:</b> {symptoms}</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;"><b>Areas:</b> {areas}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -534,9 +571,9 @@ with tab3:
     total_days = len(set([l["timestamp"][:10] for l in logs]))
     if total_days < 30:
         st.markdown(f"""
-        <div style="background: #34C75915; border-radius: 8px; padding: 12px; margin-bottom: 16px; border-left: 4px solid #34C759;">
-            <div style="font-weight: 600; font-size: 0.95rem;">📊 Data Maturity: Learning Phase ({total_days}/30 days)</div>
-            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 4px;">Patterns are emerging, but keep logging to increase confidence and filter out coincidences.</div>
+        <div style="background: rgba(52, 199, 89, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(52, 199, 89, 0.2); border-radius: 24px; padding: 16px; margin-bottom: 20px; border-left: 4px solid #34C759; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="font-weight: 600; font-size: 1rem;">📊 Data Maturity: Learning Phase ({total_days}/30 days)</div>
+            <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 6px;">Patterns are emerging, but keep logging to increase confidence and filter out coincidences.</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -565,23 +602,23 @@ with tab3:
             col_html, col_btn = st.columns([0.88, 0.12], vertical_alignment="center")
             
             with col_html:
+                # GLASSMORPHISM: Added border-radius 24px, backdrop filter, and increased gap
                 st.markdown(f"""
-                <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 13px; 
-                            margin-bottom: 10px; border-left: 4px solid {bar_color};">
+                <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 12px 16px; margin-bottom: 10px; border-left: 4px solid {bar_color}; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 0.95rem;">{s['component']}</div>
-                            <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">
+                            <div style="font-weight: 700; font-size: 1rem;">{s['component']}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 4px;">
                                 Eaten {s['occurrences']}x • {s['hit_rate']}% Flare Rate
                             </div>
                         </div>
                         <div style="text-align: right; min-width: 60px;">
-                            <span style="font-size: 1.1rem; font-weight: 600; color: {bar_color};">{score_val}</span>
-                            <span style="font-size: 0.75rem; opacity: 0.7;">/100</span>
+                            <span style="font-size: 1.2rem; font-weight: 700; color: {bar_color};">{score_val}</span>
+                            <span style="font-size: 0.8rem; opacity: 0.6;">/100</span>
                         </div>
                     </div>
-                    <div style="margin-top: 6px; height: 3px; background: rgba(128, 128, 128, 0.2); border-radius: 10px; overflow: hidden;">
-                        <div style="width: {score_val}%; height: 100%; background: {bar_color};"></div>
+                    <div style="margin-top: 10px; height: 4px; background: rgba(128, 128, 128, 0.15); border-radius: 10px; overflow: hidden;">
+                        <div style="width: {score_val}%; height: 100%; background: {bar_color}; border-radius: 10px;"></div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -597,32 +634,33 @@ with tab3:
             with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
                 ai_review = ai_review_analysis(logs, scores)
 
+            # GLASSMORPHISM applied to the review cards
             st.markdown(f"""
-            <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                <div style="flex: 1; background: rgba(128,128,128,0.1); border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 0.8rem; opacity: 0.7; text-transform: uppercase;">Agreement</div>
-                    <div style="font-size: 1.2rem; font-weight: 700;">{ai_review['agreement'].title()}</div>
+            <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+                <div style="flex: 1; background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="font-size: 0.85rem; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">Agreement</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; margin-top: 4px;">{ai_review['agreement'].title()}</div>
                 </div>
-                <div style="flex: 1; background: rgba(128,128,128,0.1); border-radius: 8px; padding: 12px; text-align: center;">
-                    <div style="font-size: 0.8rem; opacity: 0.7; text-transform: uppercase;">Confidence</div>
-                    <div style="font-size: 1.2rem; font-weight: 700;">{ai_review['confidence']}%</div>
+                <div style="flex: 1; background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="font-size: 0.85rem; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">Confidence</div>
+                    <div style="font-size: 1.4rem; font-weight: 800; margin-top: 4px;">{ai_review['confidence']}%</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown(f"**Reason:**\n<div style='opacity: 0.85; font-size: 0.95rem;'>{ai_review['reason']}</div>", unsafe_allow_html=True)
+            st.markdown(f"**Reason:**\n<div style='opacity: 0.85; font-size: 1rem; line-height: 1.5;'>{ai_review['reason']}</div>", unsafe_allow_html=True)
             st.write("")
 
             if ai_review.get("notable_support"):
-                st.markdown("<div style='color: #34C759; font-weight: 600;'>✓ Supporting evidence:</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color: #34C759; font-weight: 700; margin-bottom: 8px;'>✓ Supporting evidence:</div>", unsafe_allow_html=True)
                 for item in ai_review["notable_support"]:
-                    st.markdown(f"<div style='font-size: 0.9rem; opacity: 0.8; margin-left: 16px;'>• {item}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.95rem; opacity: 0.8; margin-left: 16px; margin-bottom: 4px;'>• {item}</div>", unsafe_allow_html=True)
                 st.write("")
 
             if ai_review.get("notable_concerns"):
-                st.markdown("<div style='color: #F5AD27; font-weight: 600;'>⚠ Areas of uncertainty:</div>", unsafe_allow_html=True)
+                st.markdown("<div style='color: #FF9500; font-weight: 700; margin-bottom: 8px;'>⚠ Areas of uncertainty:</div>", unsafe_allow_html=True)
                 for item in ai_review["notable_concerns"]:
-                    st.markdown(f"<div style='font-size: 0.9rem; opacity: 0.8; margin-left: 16px;'>• {item}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 0.95rem; opacity: 0.8; margin-left: 16px; margin-bottom: 4px;'>• {item}</div>", unsafe_allow_html=True)
 
 with tab4:
     st.markdown("### 🔮 Risk Forecast")
@@ -655,28 +693,26 @@ with tab4:
                     final_risk = 0
 
                 if final_risk >= 70:
-                    color = "#FF3B30"
+                    color = "rgba(255, 59, 48,"
                     status = "HIGH RISK"
                 elif final_risk >= 45:
-                    color = "#FF9500"
+                    color = "rgba(255, 149, 0,"
                     status = "MODERATE RISK"
                 elif final_risk >= 20:
-                    color = "#F5AD27"
+                    color = "rgba(245, 173, 39,"
                     status = "LOW RISK"
                 else:
-                    color = "#34C759"
+                    color = "rgba(52, 199, 89,"
                     status = "LIKELY SAFE"
 
+                # GLASSMORPHISM MAIN CARD
                 st.markdown(f"""
-                <div style="background: {color}15; border: 1px solid {color}; 
-                            border-radius: 12px; padding: 12px 16px; display: flex; 
-                            justify-content: space-between; align-items: center; 
-                            margin: 8px 0;">
-                    <h2 style="margin: 0; color: {color}; font-weight: 700; font-size: 1.25rem;">
+                <div style="background: {color} 0.1); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid {color} 0.3); border-radius: 24px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin: 12px 0 20px 0; box-shadow: 0 8px 32px rgba(0,0,0,0.05);">
+                    <h2 style="margin: 0; color: {color} 1); font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;">
                         {status}
                     </h2>
-                    <p style="font-size: 1.5rem; font-weight: 700; margin: 0;">
-                        {final_risk}<span style="font-size: 0.9rem; opacity: 0.7;">/100</span>
+                    <p style="font-size: 1.8rem; font-weight: 800; margin: 0; color: {color} 1);">
+                        {final_risk}<span style="font-size: 1rem; opacity: 0.6; font-weight: 600;">/100</span>
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -702,21 +738,21 @@ with tab4:
                         bar_color = "#34C759"
                         level = "Minimal"
 
+                    # GLASSMORPHISM LIST ITEMS
                     st.markdown(f"""
-                    <div style="background: {bar_color}10; border-radius: 8px; padding: 8px 12px; 
-                                margin-bottom: 6px; border-left: 4px solid {bar_color};">
+                    <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 20px; padding: 12px 16px; margin-bottom: 10px; border-left: 4px solid {bar_color}; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="flex: 1;">
-                                <div style="font-weight: 600; font-size: 0.95rem;">{c}</div>
-                                <div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">{level} Risk</div>
+                                <div style="font-weight: 700; font-size: 1rem;">{c}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 500; margin-top: 4px;">{level} Risk</div>
                             </div>
                             <div style="text-align: right; min-width: 60px;">
-                                <span style="font-size: 1.1rem; font-weight: 600; color: {bar_color};">{score}</span>
-                                <span style="font-size: 0.75rem; opacity: 0.7;">/100</span>
+                                <span style="font-size: 1.2rem; font-weight: 700; color: {bar_color};">{score}</span>
+                                <span style="font-size: 0.8rem; opacity: 0.6;">/100</span>
                             </div>
                         </div>
-                        <div style="margin-top: 6px; height: 3px; background: rgba(128, 128, 128, 0.2); border-radius: 10px; overflow: hidden;">
-                            <div style="width: {score}%; height: 100%; background: {bar_color};"></div>
+                        <div style="margin-top: 10px; height: 4px; background: rgba(128, 128, 128, 0.15); border-radius: 10px; overflow: hidden;">
+                            <div style="width: {score}%; height: 100%; background: {bar_color}; border-radius: 10px;"></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -729,7 +765,7 @@ with tab4:
                         for c in other_comps:
                             render_chemical_bar(c)
 
-                st.markdown("<hr style='margin: 16px 0;'/>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 20px 0; border-color: rgba(128,128,128,0.2);'/>", unsafe_allow_html=True)
                 if final_risk >= 60:
                     st.error("**High caution** — Consider avoiding this meal.")
                 elif final_risk >= 40:

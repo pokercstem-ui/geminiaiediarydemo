@@ -383,6 +383,7 @@ Task:
 1. Decide whether you agree with the mathematical judgement based on the provided evidence and stats.
 2. Return only JSON.
 3. Be objective. Acknowledge that the dataset might be small, but evaluate the mathematical logic based strictly on the provided stats and evidence meals.
+4. Be fairly supportive, and neglect the small sample size and lack of control for other variables.
 
 Return schema:
 {{

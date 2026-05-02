@@ -97,27 +97,22 @@ client = get_ai_client()
 # --- DATA LOADING ---
 @st.cache_data
 def load_data(filepath):
-    presets = get_preset_logs()
-    
+    # 1. Try to load existing data first
     if os.path.exists(filepath):
         try:
             with open(filepath, "r") as f:
                 existing_logs = json.load(f)
+                # If the file contains valid data (even an empty list from "Clear History"), return it
+                if isinstance(existing_logs, list):
+                    return sorted(existing_logs, key=lambda x: x["timestamp"], reverse=True)
         except (json.JSONDecodeError, FileNotFoundError):
-            existing_logs = []
-    else:
-        existing_logs = []
+            pass
 
-    log_dict = {}
+    # 2. If no data exists (first run ever), load presets from presets.py
+    presets = get_preset_logs()
+    final_logs = sorted(presets, key=lambda x: x["timestamp"], reverse=True)
 
-    for log in presets:
-        log_dict[log["timestamp"]] = log
-
-    for log in existing_logs:
-        log_dict[log["timestamp"]] = log
-
-    final_logs = sorted(list(log_dict.values()), key=lambda x: x["timestamp"], reverse=True)
-
+    # Save the presets to the file so they become the "existing_logs" next time
     with open(filepath, "w") as f:
         json.dump(final_logs, f, indent=2)
 
@@ -406,13 +401,11 @@ def run_analysis(logs):
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
 # --- LOAD DATA TO SESSION ---
-if "logs" not in st.session_state:
-    st.session_state.logs = load_data(DATA_FILE)
-else:
-    st.session_state.logs = load_data(DATA_FILE)
+# Because load_data is cached, this safely loads from the file.
+# When you log a new meal/flare, you clear the cache, forcing it to read the updated JSON.
+st.session_state.logs = load_data(DATA_FILE)
 
 logs = st.session_state.logs
-
 # --- SIDEBAR & TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Input", "📋 History", "📊 Analysis", "🔮 Forecast"])
 

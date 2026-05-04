@@ -563,8 +563,6 @@ with tab1:
             """, unsafe_allow_html=True)
             with st.form("meal_form", clear_on_submit=True):
                 col_date1, col_time1 = st.columns(2)
-                with st.form("meal_form", clear_on_submit=True):
-                    col_date1, col_time1 = st.columns(2)
                 with col_date1:
                     meal_date = st.date_input("Meal date") 
                 with col_time1:

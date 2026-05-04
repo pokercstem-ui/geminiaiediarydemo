@@ -496,7 +496,8 @@ if "forum_posts" not in st.session_state:
             "likes": 14,
             "comments": [
                 {"author": "ItchyMom", "timestamp": "10 mins ago", "content": "Aquaphor was the only thing that didn't sting for us during the worst of it!"},
-                {"author": "PatchTester", "timestamp": "5 mins ago", "content": "Make sure you check the ingredients for preservatives if you are highly sensitive right now."}
+                {"author": "PatchTester", "timestamp": "5 mins ago", "content": "Make sure you check the ingredients for preservatives if you are highly sensitive right now."},
+                {"author": "SkinHealer99", "timestamp": "2 mins ago", "content": "CeraVe Healing Ointment! It has ceramides and is petroleum-based so it locks in moisture."}
             ]
         },
         {
@@ -507,7 +508,8 @@ if "forum_posts" not in st.session_state:
             "content": "Here is my go-to anti-inflammatory breakfast smoothie! 1/2 cup frozen blueberries, 1 handful fresh kale, 1 scoop hemp seeds, and 1/2 cup coconut yogurt packed with probiotics. It's very low histamine and helps cool down my skin from the inside out.",
             "likes": 32,
             "comments": [
-                {"author": "ChefSafe", "timestamp": "30 mins ago", "content": "I make almost the exact same thing but I add half an avocado for extra healthy fats. It makes it so creamy!"}
+                {"author": "ChefSafe", "timestamp": "30 mins ago", "content": "I make almost the exact same thing but I add half an avocado for extra healthy fats. It makes it so creamy!"},
+                {"author": "DietDetective", "timestamp": "15 mins ago", "content": "Do you find the hemp seeds trigger any itching? I'm scared to try new seeds."}
             ]
         },
         {
@@ -517,17 +519,107 @@ if "forum_posts" not in st.session_state:
             "timestamp": "3 hours ago",
             "content": "Just made the most amazing low-histamine chicken broth! The trick is to pressure cook it for only 45 minutes instead of a slow simmer. It totally prevents the histamine buildup that usually causes my flare-ups.",
             "likes": 45,
-            "comments": []
+            "comments": [
+                {"author": "NewbieCook", "timestamp": "1 hour ago", "content": "Does freezing the leftovers right away also help stop histamine from building up?"},
+                {"author": "ChefSafe", "timestamp": "45 mins ago", "content": "@NewbieCook Yes! I freeze it in individual portions immediately after it cools."}
+            ]
         },
         {
             "id": 4,
             "author": "AllergyClinic",
             "category": "Workshops",
-            "timestamp": "1 day ago",
+            "timestamp": "5 hours ago",
             "content": "Reminder: We are hosting a free webinar this Friday on identifying hidden contact allergens. If you've hit a plateau in your healing, proper patch testing might be the key to figuring out what is holding you back!",
             "likes": 88,
             "comments": [
-                {"author": "DocDerma", "timestamp": "12 hours ago", "content": "Highly recommend this workshop to all my patients."}
+                {"author": "DocDerma", "timestamp": "4 hours ago", "content": "Highly recommend this workshop to all my patients."}
+            ]
+        },
+        {
+            "id": 5,
+            "author": "DairyFreeDave",
+            "category": "Food",
+            "timestamp": "8 hours ago",
+            "content": "I cut out dairy completely a month ago and noticed a huge drop in my flare-ups. Has anyone else experienced this? I'm trying to figure out if it was a lactose intolerance or if it was triggering an immune response.",
+            "likes": 21,
+            "comments": [
+                {"author": "DietDetective", "timestamp": "7 hours ago", "content": "For me, it wasn't lactose, it was the casein protein in dairy! Try checking if A2 milk works for you once you are clear."}
+            ]
+        },
+        {
+            "id": 6,
+            "author": "ItchyMom",
+            "category": "Skincare",
+            "timestamp": "12 hours ago",
+            "content": "My dermatologist suggested we try wet wrap therapy for my son's severe flare tonight before considering a stronger dose of topical steroids. Fingers crossed he can finally get some comfortable sleep.",
+            "likes": 56,
+            "comments": [
+                {"author": "SkinHealer99", "timestamp": "10 hours ago", "content": "Wet wraps saved my sanity! Use warm water for the first layer, it's much less shocking to the system."},
+                {"author": "ItchyMom", "timestamp": "8 hours ago", "content": "Thank you! We just put them on and he stopped scratching almost instantly."}
+            ]
+        },
+        {
+            "id": 7,
+            "author": "DocDerma",
+            "category": "Workshops",
+            "timestamp": "1 day ago",
+            "content": "Join us tomorrow for a virtual workshop on advanced flare management. We will be demonstrating how to properly execute wet wrap therapy for severe overnight itching. Link in my bio!",
+            "likes": 112,
+            "comments": []
+        },
+        {
+            "id": 8,
+            "author": "PatchTester",
+            "category": "Skincare",
+            "timestamp": "2 days ago",
+            "content": "Just got my patch testing results back! Turns out I'm allergic to a specific preservative (Methylisothiazolinone) found in 90% of commercial shampoos. Read your labels closely!",
+            "likes": 94,
+            "comments": [
+                {"author": "HealingJourney22", "timestamp": "1 day ago", "content": "Oh wow, I use a mainstream shampoo. I need to check my bottle right now."},
+                {"author": "SkinHealer99", "timestamp": "12 hours ago", "content": "Vanicream makes a great shampoo that is completely free of that and other common allergens!"}
+            ]
+        },
+        {
+            "id": 9,
+            "author": "DietDetective",
+            "category": "Food",
+            "timestamp": "3 days ago",
+            "content": "I realized tomatoes are a massive trigger for me. Turns out they are incredibly high in histamine! Does anyone take daily probiotics to help their gut process high histamine foods better?",
+            "likes": 37,
+            "comments": [
+                {"author": "GutHealthGuru", "timestamp": "2 days ago", "content": "Yes, but be careful! Certain probiotic strains (like Lactobacillus casei) actually PRODUCE histamine. Look for histamine-degrading strains like Bifidobacterium infantis."}
+            ]
+        },
+        {
+            "id": 10,
+            "author": "ZenMaster",
+            "category": "Workshops",
+            "timestamp": "4 days ago",
+            "content": "Hosting a 15-minute guided meditation session focused on stress reduction. Cortisol drives inflammation, so calming the nervous system is just as important as avoiding topical steroids or food triggers!",
+            "likes": 45,
+            "comments": []
+        },
+        {
+            "id": 11,
+            "author": "RecipeQueen",
+            "category": "Recipes",
+            "timestamp": "5 days ago",
+            "content": "Nightshade-free 'Nomato' sauce! Carrots, beets, onions, and garlic roasted and blended with olive oil. It looks and tastes remarkably close to marinara sauce without the massive histamine dump.",
+            "likes": 156,
+            "comments": [
+                {"author": "ChefSafe", "timestamp": "4 days ago", "content": "Genius! I'm making this tonight for my gluten-free pasta."},
+                {"author": "DietDetective", "timestamp": "3 days ago", "content": "The beets give it the perfect color. Thank you for this!"}
+            ]
+        },
+        {
+            "id": 12,
+            "author": "BarrierBuilder",
+            "category": "Skincare",
+            "timestamp": "1 week ago",
+            "content": "Has anyone noticed their skin gets worse after showers, even if it's lukewarm water? My skin feels stripped of all ceramides the second I step out.",
+            "likes": 29,
+            "comments": [
+                {"author": "DocDerma", "timestamp": "6 days ago", "content": "Water actually evaporates and pulls moisture out of the skin. You MUST apply moisturizer within 3 minutes of stepping out of the shower while the skin is still damp!"}
             ]
         }
     ]

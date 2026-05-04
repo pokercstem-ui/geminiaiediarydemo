@@ -842,7 +842,7 @@ with tab5:
     # VIEW: SINGLE POST (Comments & Likes "Screen Push")
     # ---------------------------------------------------------
     if st.session_state.selected_post_id is not None:
-        if st.button("⟨ Back to Community", use_container_width=True):
+        if st.button("Back to Community", use_container_width=True):
             st.session_state.selected_post_id = None
             st.rerun()
             

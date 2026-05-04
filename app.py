@@ -135,12 +135,10 @@ st.markdown(
 
     .stButton>button {padding: 0.3rem 0.6rem;} 
 
-    /* ==========================================
-       FORUM IOS TOOLTIPS (Alternative 1)
-       ========================================== */
+    /* FORUM IOS TOOLTIPS */
     .ios-tooltip-trigger {
         position: relative;
-        color: #007AFF; /* iOS Blue */
+        color: #007AFF;
         font-weight: 600;
         cursor: pointer;
         text-decoration: underline;
@@ -163,7 +161,6 @@ st.markdown(
         transform: translateX(-50%) translateY(10px);
         width: max-content;
         max-width: 250px;
-        /* Default to dark frosted glass for universal readability */
         background: rgba(30, 30, 30, 0.85); 
         backdrop-filter: blur(25px) saturate(180%);
         -webkit-backdrop-filter: blur(25px) saturate(180%);
@@ -181,7 +178,6 @@ st.markdown(
         pointer-events: none;
     }
 
-    /* Small triangle pointer for the bubble */
     .ios-tooltip::after {
         content: "";
         position: absolute;
@@ -193,7 +189,6 @@ st.markdown(
         border-color: rgba(30, 30, 30, 0.85) transparent transparent transparent;
     }
 
-    /* Trigger on desktop hover OR mobile tap (focus/active) */
     .ios-tooltip-trigger:hover .ios-tooltip,
     .ios-tooltip-trigger:active .ios-tooltip,
     .ios-tooltip-trigger:focus .ios-tooltip {
@@ -255,7 +250,6 @@ def load_data(filepath):
 @st.cache_data(show_spinner=False)
 def analyze_meal_with_ai(text):
     if not client:
-        st.sidebar.error("API Key is missing!")
         return {"ingredients": [], "chemical_composition": {}}
 
     prompt = (
@@ -297,7 +291,6 @@ def analyze_meal_with_ai(text):
         }
 
     except Exception as e:
-        st.sidebar.error(f"AI Error: {str(e)}")
         return {"ingredients": [], "chemical_composition": {}}
 
 @st.cache_data(show_spinner=False)
@@ -335,7 +328,6 @@ def extract_chemicals_from_meal(meal):
 
 def enforce_chemical_consistency(analysis_data, logs):
     master_dict = {}
-    
     for l in reversed(logs):
         if l["type"] == "meal":
             for ing, chems in l.get("chemical_composition", {}).items():
@@ -362,128 +354,16 @@ def enforce_chemical_consistency(analysis_data, logs):
 @st.dialog("🔬 Chemical Profile")
 def show_chemical_profile(chemical_name, occurrences, hit_rate, score):
     st.markdown(f"### {chemical_name}")
-    
     col1, col2, col3 = st.columns(3)
     col1.metric("Times Logged", occurrences)
     col2.metric("Flare Correlation", f"{hit_rate}%")
     col3.metric("Risk Score", f"{score}/100")
-    
     st.divider()
-    
     with st.spinner("Fetching data..."):
         info = get_chemical_info_from_ai(chemical_name)
-        
     st.markdown(info)
 
-def build_evidence_summary(logs, scores, max_items=8):
-    top_chemicals = [s["component"] for s in scores[:3]]
-    meals = [l for l in logs if l["type"] == "meal"]
-    flares = [l for l in logs if l["type"] == "flareup"]
-
-    relevant_meals = []
-    for m in meals:
-        m_chems = extract_chemicals_from_meal(m)
-        if any(c in m_chems for c in top_chemicals):
-            relevant_meals.append(m)
-            
-    if len(relevant_meals) < max_items:
-        remaining_meals = [m for m in meals if m not in relevant_meals]
-        relevant_meals.extend(remaining_meals[:max_items - len(relevant_meals)])
-    
-    relevant_meals = relevant_meals[:max_items]
-
-    meal_summary = []
-    for m in relevant_meals:
-        meal_summary.append({
-            "content": m.get("content", ""),
-            "ingredients": m.get("ingredients", []),
-            "chemicals": extract_chemicals_from_meal(m),
-            "timestamp": m.get("timestamp", "")
-        })
-
-    flare_summary = []
-    for f in flares[:max_items]:
-        flare_summary.append({
-            "severity": f.get("severity", 0),
-            "symptoms": f.get("symptoms", []),
-            "affected_areas": f.get("affected_areas", []),
-            "timestamp": f.get("timestamp", "")
-        })
-
-    return {
-        "top_suspects_stats": [
-            {
-                "chemical": s["component"], 
-                "times_eaten": s["occurrences"], 
-                "flare_correlation": f"{s['hit_rate']}%"
-            } for s in scores[:5]
-        ],
-        "relevant_evidence_meals": meal_summary,
-        "recent_flares": flare_summary,
-        "total_meals_logged": len(meals),
-        "total_flares_logged": len(flares)
-    }
-
-@st.cache_data(show_spinner=False)
-def ai_review_analysis(logs, scores):
-    if not client:
-        return {"agreement": "unknown", "reason": "Missing API key.", "confidence": 0}
-
-    evidence = build_evidence_summary(logs, scores)
-
-    prompt = f"""
-You are reviewing a dietary trigger analysis for eczema patterns.
-The mathematical model ranked these chemicals as triggers based on timing and frequency.
-
-Task:
-1. Decide whether you agree with the mathematical judgement based on the provided evidence and stats.
-2. Return only JSON.
-3. Be objective. Acknowledge that the dataset might be small, but evaluate the mathematical logic based strictly on the provided stats and evidence meals.
-
-Return schema:
-{{
-  "agreement": "agree" | "partial" | "disagree",
-  "confidence": 0-100,
-  "reason": "short explanation",
-  "notable_support": ["optional bullet-like strings"],
-  "notable_concerns": ["optional bullet-like strings"]
-}}
-
-Evidence:
-{json.dumps(evidence, ensure_ascii=False, indent=2)}
-""".strip()
-
-    try:
-        response = client.chat.completions.create(
-            model="default",
-            messages=[
-                {"role": "system", "content": "You are a cautious medical-pattern review assistant. Do not claim absolute causation. Focus on whether the statistical pattern makes sense given the data. If the dataset is small, evaluate the existing data at face value while noting the sample size as a minor concern, not a dealbreaker."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1
-        )
-
-        result_text = response.choices[0].message.content.strip()
-        if result_text.find('{') != -1:
-            result_text = result_text[result_text.find('{'):result_text.rfind('}')+1]
-        data = json.loads(result_text)
-
-        return {
-            "agreement": data.get("agreement", "unknown"),
-            "confidence": data.get("confidence", 0),
-            "reason": data.get("reason", ""),
-            "notable_support": data.get("notable_support", []),
-            "notable_concerns": data.get("notable_concerns", [])
-        }
-    except Exception as e:
-        return {
-            "agreement": "unknown",
-            "confidence": 0,
-            "reason": f"AI review failed: {str(e)}",
-            "notable_support": [],
-            "notable_concerns": []
-        }
-
+# --- BAYESIAN ANALYSIS LOGIC ---
 def run_analysis(logs):
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
@@ -556,9 +436,34 @@ def run_analysis(logs):
 
 
 # ==========================================
-# 🌐 COMMUNITY FORUM LOGIC (NEW)
+# 🔮 REUSABLE RISK FORECAST ENGINE
 # ==========================================
-# The predefined dictionary for eczema terminology
+def get_risk_forecast(meal_txt, logs):
+    """Encapsulates the mathematical risk logic to be used anywhere."""
+    analysis_data = analyze_meal_with_ai(meal_txt)
+    analysis_data = enforce_chemical_consistency(analysis_data, logs)
+    
+    comps = extract_chemicals_from_meal(analysis_data)
+    analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
+
+    if not comps:
+        return {"risk": 0, "comps": [], "scores": analysis_scores}
+    
+    trigger_scores = [analysis_scores.get(c, 0) for c in comps]
+    if trigger_scores:
+        max_score = max(trigger_scores)
+        avg_score = sum(trigger_scores) / len(trigger_scores)
+        final_risk = int(max_score * 0.7 + avg_score * 0.3)
+        final_risk = min(final_risk, 100)
+    else:
+        final_risk = 0
+    
+    return {"risk": final_risk, "comps": comps, "scores": analysis_scores}
+
+
+# ==========================================
+# 🌐 COMMUNITY FORUM LOGIC & MOCK DATA
+# ==========================================
 FORUM_DICTIONARY = {
     "ceramides": "Lipids (fats) found naturally in high concentrations in the uppermost layers of the skin. Eczema-prone skin often lacks ceramides, leading to a compromised barrier.",
     "topical steroids": "Anti-inflammatory creams or ointments prescribed to reduce severe eczema redness and swelling during flare-ups.",
@@ -570,17 +475,14 @@ FORUM_DICTIONARY = {
 }
 
 def highlight_keywords(text):
-    """Scans forum post text and wraps keywords in the iOS Tooltip HTML structure."""
     highlighted_text = text
     for kw, definition in FORUM_DICTIONARY.items():
-        # Using a case-insensitive regex to match whole words only
         pattern = re.compile(rf'\b({kw})\b', re.IGNORECASE)
-        # tabindex="0" makes it tappable on mobile devices (triggers :focus pseudo-class)
         replacement = f'<span class="ios-tooltip-trigger" tabindex="0">\\1<span class="ios-tooltip">{definition}</span></span>'
         highlighted_text = pattern.sub(replacement, highlighted_text)
     return highlighted_text
 
-# Initialize mock forum posts in session state
+# Initialize mock forum posts in session state (Now with Likes and Comments!)
 if "forum_posts" not in st.session_state:
     st.session_state.forum_posts = [
         {
@@ -588,78 +490,56 @@ if "forum_posts" not in st.session_state:
             "author": "HealingJourney22",
             "category": "Skincare",
             "timestamp": "15 mins ago",
-            "content": "Currently going through TSW and the flaking is unbelievable. Finding a moisturizer that doesn't burn is so hard right now. Does anyone have recommendations for gentle ointments rich in ceramides?"
+            "content": "Currently going through TSW and the flaking is unbelievable. Finding a moisturizer that doesn't burn is so hard right now. Does anyone have recommendations for gentle ointments rich in ceramides?",
+            "likes": 14,
+            "comments": [
+                {"author": "ItchyMom", "timestamp": "10 mins ago", "content": "Aquaphor was the only thing that didn't sting for us during the worst of it!"},
+                {"author": "PatchTester", "timestamp": "5 mins ago", "content": "Make sure you check the ingredients for preservatives if you are highly sensitive right now."}
+            ]
         },
         {
             "id": 2,
             "author": "GutHealthGuru",
             "category": "Recipes",
             "timestamp": "1 hour ago",
-            "content": "Here is my go-to anti-inflammatory breakfast smoothie! 1/2 cup frozen blueberries, 1 handful fresh kale, 1 scoop hemp seeds, and 1/2 cup coconut yogurt packed with probiotics. It's very low histamine and helps cool down my skin from the inside out."
+            "content": "Here is my go-to anti-inflammatory breakfast smoothie! 1/2 cup frozen blueberries, 1 handful fresh kale, 1 scoop hemp seeds, and 1/2 cup coconut yogurt packed with probiotics. It's very low histamine and helps cool down my skin from the inside out.",
+            "likes": 32,
+            "comments": [
+                {"author": "ChefSafe", "timestamp": "30 mins ago", "content": "I make almost the exact same thing but I add half an avocado for extra healthy fats. It makes it so creamy!"}
+            ]
         },
         {
             "id": 3,
-            "author": "SkinHealer99",
-            "category": "Skincare",
-            "timestamp": "2 hours ago",
-            "content": "Has anyone had success rebuilding their skin barrier using moisturizers heavy in ceramides? I recently stopped using topical steroids and my skin is extremely dry and flaking."
-        },
-        {
-            "id": 4,
             "author": "ChefSafe",
             "category": "Recipes",
             "timestamp": "3 hours ago",
-            "content": "Just made the most amazing low-histamine chicken broth! The trick is to pressure cook it for only 45 minutes instead of a slow simmer. It totally prevents the histamine buildup that usually causes my flare-ups."
+            "content": "Just made the most amazing low-histamine chicken broth! The trick is to pressure cook it for only 45 minutes instead of a slow simmer. It totally prevents the histamine buildup that usually causes my flare-ups.",
+            "likes": 45,
+            "comments": []
         },
         {
-            "id": 5,
-            "author": "DairyFreeDave",
-            "category": "Food",
-            "timestamp": "5 hours ago",
-            "content": "I cut out dairy completely a month ago and noticed a huge drop in my flare-ups. Has anyone else experienced this? I'm trying to figure out if it was a lactose intolerance or if it was triggering an immune response."
-        },
-        {
-            "id": 6,
-            "author": "ItchyMom",
-            "category": "Skincare",
-            "timestamp": "8 hours ago",
-            "content": "My dermatologist suggested we try wet wrap therapy for my son's severe flare tonight before considering a stronger dose of topical steroids. Fingers crossed he can finally get some comfortable sleep."
-        },
-        {
-            "id": 7,
+            "id": 4,
             "author": "AllergyClinic",
             "category": "Workshops",
             "timestamp": "1 day ago",
-            "content": "Reminder: We are hosting a free webinar this Friday on identifying hidden contact allergens. If you've hit a plateau in your healing, proper patch testing might be the key to figuring out what is holding you back!"
-        },
-        {
-            "id": 8,
-            "author": "DocDerma",
-            "category": "Workshops",
-            "timestamp": "1 day ago",
-            "content": "Join us tomorrow for a virtual workshop on advanced flare management. We will be demonstrating how to properly execute wet wrap therapy for severe overnight itching."
-        },
-        {
-            "id": 9,
-            "author": "PatchTester",
-            "category": "Skincare",
-            "timestamp": "2 days ago",
-            "content": "Just got my patch testing results back! Turns out I'm allergic to a specific preservative (Methylisothiazolinone) found in 90% of commercial shampoos. Read your labels closely!"
-        },
-        {
-            "id": 10,
-            "author": "DietDetective",
-            "category": "Food",
-            "timestamp": "3 days ago",
-            "content": "I realized tomatoes are a massive trigger for me. Turns out they are incredibly high in histamine! Does anyone take daily probiotics to help their gut process high histamine foods better?"
+            "content": "Reminder: We are hosting a free webinar this Friday on identifying hidden contact allergens. If you've hit a plateau in your healing, proper patch testing might be the key to figuring out what is holding you back!",
+            "likes": 88,
+            "comments": [
+                {"author": "DocDerma", "timestamp": "12 hours ago", "content": "Highly recommend this workshop to all my patients."}
+            ]
         }
     ]
+
+# State tracker for our "Screen Push" navigation
+if "selected_post_id" not in st.session_state:
+    st.session_state.selected_post_id = None
+
 
 # --- LOAD DATA TO SESSION ---
 st.session_state.logs = load_data(DATA_FILE)
 logs = st.session_state.logs
 
-# --- SIDEBAR & TABS (5 TABS NOW) ---
+# --- SIDEBAR & TABS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     ":material/edit_square: Input", 
     ":material/history: History", 
@@ -850,40 +730,6 @@ with tab3:
             with col_btn:
                 if st.button("🔍", key=f"btn_{s['component']}", help=f"Learn more about {s['component']}", use_container_width=True):
                     show_chemical_profile(s['component'], s['occurrences'], s['hit_rate'], s["score"])
-        
-        st.divider()
-        st.subheader("🤖 AI Review")
-        
-        if st.button("Generate AI Review"):
-            with st.spinner("Getting AI's second opinion on the mathematical analysis..."):
-                ai_review = ai_review_analysis(logs, scores)
-
-            st.markdown(f"""
-            <div style="display: flex; gap: 16px; margin-bottom: 20px;">
-                <div style="flex: 1; background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                    <div style="font-size: 0.85rem; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">Agreement</div>
-                    <div style="font-size: 1.4rem; font-weight: 800; margin-top: 4px;">{ai_review['agreement'].title()}</div>
-                </div>
-                <div style="flex: 1; background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-                    <div style="font-size: 0.85rem; font-weight: 600; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;">Confidence</div>
-                    <div style="font-size: 1.4rem; font-weight: 800; margin-top: 4px;">{ai_review['confidence']}%</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown(f"**Reason:**\n<div style='opacity: 0.85; font-size: 1rem; line-height: 1.5;'>{ai_review['reason']}</div>", unsafe_allow_html=True)
-            st.write("")
-
-            if ai_review.get("notable_support"):
-                st.markdown("<div style='color: #34C759; font-weight: 700; margin-bottom: 8px;'>✓ Supporting evidence:</div>", unsafe_allow_html=True)
-                for item in ai_review["notable_support"]:
-                    st.markdown(f"<div style='font-size: 0.95rem; opacity: 0.8; margin-left: 16px; margin-bottom: 4px;'>• {item}</div>", unsafe_allow_html=True)
-                st.write("")
-
-            if ai_review.get("notable_concerns"):
-                st.markdown("<div style='color: #FF9500; font-weight: 700; margin-bottom: 8px;'>⚠ Areas of uncertainty:</div>", unsafe_allow_html=True)
-                for item in ai_review["notable_concerns"]:
-                    st.markdown(f"<div style='font-size: 0.95rem; opacity: 0.8; margin-left: 16px; margin-bottom: 4px;'>• {item}</div>", unsafe_allow_html=True)
 
 with tab4:
     st.markdown("### :material/online_prediction: Risk Forecast")
@@ -899,24 +745,16 @@ with tab4:
 
     if check_btn and predict_txt:
         with st.spinner("Analyzing against your history..."):
-            analysis_data = analyze_meal_with_ai(predict_txt)
-            analysis_data = enforce_chemical_consistency(analysis_data, st.session_state.logs)
             
-            comps = extract_chemicals_from_meal(analysis_data)
-            analysis_scores = {s["component"]: s["score"] for s in run_analysis(logs)}
+            # Using our new reusable engine
+            forecast = get_risk_forecast(predict_txt, logs)
+            final_risk = forecast["risk"]
+            comps = forecast["comps"]
+            analysis_scores = forecast["scores"]
 
             if not comps:
                 st.warning("No tracked chemicals found in that meal.")
             else:
-                trigger_scores = [analysis_scores.get(c, 0) for c in comps]
-                if trigger_scores:
-                    max_score = max(trigger_scores)
-                    avg_score = sum(trigger_scores) / len(trigger_scores)
-                    final_risk = int(max_score * 0.7 + avg_score * 0.3)
-                    final_risk = min(final_risk, 100)
-                else:
-                    final_risk = 0
-
                 if final_risk >= 70:
                     color = "rgba(255, 59, 48,"
                     status = "HIGH RISK"
@@ -1000,65 +838,37 @@ with tab4:
 # 🌐 TAB 5: COMMUNITY FORUM
 # ==========================================
 with tab5:
-    st.markdown("### :material/forum: Community Forum")
-    
-    # iOS-style segmented control equivalent for category filtering
-    category_filter = st.radio(
-        "Filter by category",
-        ["All", "Food", "Recipes", "Skincare", "Workshops"], # Added Recipes
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-    
-    st.write("") # spacing
-    
-    # Simple form to add a new post
-    with st.expander("✏️ Write a new post..."):
-        with st.form("new_post_form", clear_on_submit=True):
-            # Added Recipes to the dropdown
-            new_cat = st.selectbox("Category", ["Food", "Recipes", "Skincare", "Workshops"])
-            new_content = st.text_area("What's on your mind?", height=100)
-            submit_post = st.form_submit_button("Post to Community")
+    # ---------------------------------------------------------
+    # VIEW: SINGLE POST (Comments & Likes "Screen Push")
+    # ---------------------------------------------------------
+    if st.session_state.selected_post_id is not None:
+        if st.button("⟨ Back to Community", use_container_width=True):
+            st.session_state.selected_post_id = None
+            st.rerun()
             
-            if submit_post and new_content:
-                st.session_state.forum_posts.insert(0, {
-                    "id": len(st.session_state.forum_posts) + 1,
-                    "author": "You",
-                    "category": new_cat,
-                    "timestamp": "Just now",
-                    "content": new_content
-                })
-                st.rerun()
+        # Find the specific post
+        active_post = next((p for p in st.session_state.forum_posts if p["id"] == st.session_state.selected_post_id), None)
+        
+        if active_post:
+            st.markdown(f"### Post by {active_post['author']}")
+            
+            # Styling colors
+            if active_post["category"] == "Food": cat_color = "#FF9500" 
+            elif active_post["category"] == "Recipes": cat_color = "#FF2D55" 
+            elif active_post["category"] == "Skincare": cat_color = "#AF52DE" 
+            else: cat_color = "#5856D6" 
 
-    st.markdown("<hr style='margin: 16px 0; border-color: rgba(128,128,128,0.2);'/>", unsafe_allow_html=True)
+            processed_content = highlight_keywords(active_post["content"])
 
-    # Filter and display posts
-    for post in st.session_state.forum_posts:
-        if category_filter == "All" or post["category"] == category_filter:
-            
-            # Apply the keyword highlighting logic
-            processed_content = highlight_keywords(post["content"])
-            
-            # Set a theme color based on category
-            if post["category"] == "Food":
-                cat_color = "#FF9500" # iOS Orange
-            elif post["category"] == "Recipes":
-                cat_color = "#FF2D55" # iOS Pink (New!)
-            elif post["category"] == "Skincare":
-                cat_color = "#AF52DE" # iOS Purple
-            else:
-                cat_color = "#5856D6" # iOS Indigo
-                
-            # Render the glassmorphic forum card
             st.markdown(f"""
-            <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 18px; margin-bottom: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                     <div>
-                        <div style="font-weight: 700; font-size: 1.05rem;">{post['author']}</div>
-                        <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 2px;">{post['timestamp']}</div>
+                        <div style="font-weight: 700; font-size: 1.05rem;">{active_post['author']}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 2px;">{active_post['timestamp']}</div>
                     </div>
-                    <div style="background: {cat_color}20; color: {cat_color}; border: 1px solid {cat_color}40; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-                        {post['category']}
+                    <div style="background: {cat_color}20; color: {cat_color}; border: 1px solid {cat_color}40; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
+                        {active_post['category']}
                     </div>
                 </div>
                 <div style="font-size: 1rem; line-height: 1.5; opacity: 0.9;">
@@ -1066,3 +876,133 @@ with tab5:
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+            # Interactive Like Button
+            if st.button(f"❤️ Like ({active_post['likes']})", key=f"like_detail_{active_post['id']}"):
+                active_post['likes'] += 1
+                st.rerun()
+
+            st.markdown("<hr style='margin: 20px 0; border-color: rgba(128,128,128,0.2);'/>", unsafe_allow_html=True)
+            st.markdown("#### Comments")
+            
+            # Display existing comments
+            for c in active_post["comments"]:
+                st.markdown(f"""
+                <div style="background: rgba(128,128,128,0.03); border-radius: 16px; padding: 12px 16px; margin-bottom: 8px;">
+                    <span style="font-weight: 700; font-size: 0.9rem;">{c['author']}</span>
+                    <span style="font-size: 0.75rem; opacity: 0.6; margin-left: 8px;">{c['timestamp']}</span>
+                    <div style="font-size: 0.9rem; opacity: 0.9; margin-top: 4px;">{c['content']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Add new comment
+            with st.form("new_comment_form", clear_on_submit=True):
+                new_com = st.text_input("Add a comment...", placeholder="Type your thoughts here...")
+                if st.form_submit_button("Post Comment") and new_com:
+                    active_post["comments"].append({
+                        "author": "You", 
+                        "timestamp": "Just now", 
+                        "content": new_com
+                    })
+                    st.rerun()
+
+    # ---------------------------------------------------------
+    # VIEW: MAIN COMMUNITY FEED
+    # ---------------------------------------------------------
+    else:
+        st.markdown("### :material/forum: Community Forum")
+        
+        category_filter = st.radio(
+            "Filter by category",
+            ["All", "Food", "Recipes", "Skincare", "Workshops"],
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        st.write("") 
+        
+        with st.expander("✏️ Write a new post..."):
+            with st.form("new_post_form", clear_on_submit=True):
+                new_cat = st.selectbox("Category", ["Food", "Recipes", "Skincare", "Workshops"])
+                new_content = st.text_area("What's on your mind?", height=100)
+                submit_post = st.form_submit_button("Post to Community")
+                
+                if submit_post and new_content:
+                    st.session_state.forum_posts.insert(0, {
+                        "id": len(st.session_state.forum_posts) + 1,
+                        "author": "You",
+                        "category": new_cat,
+                        "timestamp": "Just now",
+                        "content": new_content,
+                        "likes": 0,
+                        "comments": []
+                    })
+                    st.rerun()
+
+        st.markdown("<hr style='margin: 16px 0; border-color: rgba(128,128,128,0.2);'/>", unsafe_allow_html=True)
+
+        for post in st.session_state.forum_posts:
+            if category_filter == "All" or post["category"] == category_filter:
+                
+                if post["category"] == "Food": cat_color = "#FF9500" 
+                elif post["category"] == "Recipes": cat_color = "#FF2D55" 
+                elif post["category"] == "Skincare": cat_color = "#AF52DE" 
+                else: cat_color = "#5856D6" 
+                    
+                processed_content = highlight_keywords(post["content"])
+
+                # Post HTML Card
+                st.markdown(f"""
+                <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 18px; margin-bottom: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                        <div>
+                            <div style="font-weight: 700; font-size: 1.05rem;">{post['author']}</div>
+                            <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 2px;">{post['timestamp']}</div>
+                        </div>
+                        <div style="background: {cat_color}20; color: {cat_color}; border: 1px solid {cat_color}40; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
+                            {post['category']}
+                        </div>
+                    </div>
+                    <div style="font-size: 1rem; line-height: 1.5; opacity: 0.9;">
+                        {processed_content}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # RECIPE ON-DEMAND RISK SCANNER
+                if post["category"] == "Recipes":
+                    risk_state_key = f"risk_result_{post['id']}"
+                    
+                    if risk_state_key not in st.session_state:
+                        if st.button("🪄 Check My Risk for this Recipe", key=f"risk_btn_{post['id']}", use_container_width=True):
+                            with st.spinner("Analyzing against your diary..."):
+                                st.session_state[risk_state_key] = get_risk_forecast(post["content"], logs)
+                                st.rerun()
+                                
+                    if risk_state_key in st.session_state:
+                        res = st.session_state[risk_state_key]
+                        frisk = res["risk"]
+                        
+                        if frisk >= 70: r_color, status = "rgba(255, 59, 48,", "HIGH RISK"
+                        elif frisk >= 45: r_color, status = "rgba(255, 149, 0,", "MODERATE RISK"
+                        elif frisk >= 20: r_color, status = "rgba(245, 173, 39,", "LOW RISK"
+                        else: r_color, status = "rgba(52, 199, 89,", "LIKELY SAFE"
+                        
+                        st.markdown(f"""
+                        <div style="background: {r_color} 0.1); border: 1px solid {r_color} 0.3); border-radius: 16px; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 700; color: {r_color} 1); font-size: 0.9rem;">Your Risk: {status}</span>
+                            <span style="font-weight: 800; color: {r_color} 1);">{frisk}/100</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # Post Actions Bar (Likes and View Discussion)
+                c1, c2 = st.columns([0.3, 0.7])
+                with c1:
+                    if st.button(f"❤️ {post['likes']}", key=f"like_{post['id']}", use_container_width=True):
+                        post['likes'] += 1
+                        st.rerun()
+                with c2:
+                    if st.button(f"💬 View Discussion ({len(post['comments'])})", key=f"view_{post['id']}", use_container_width=True):
+                        st.session_state.selected_post_id = post["id"]
+                        st.rerun()
+                
+                st.markdown("<div style='margin-bottom: 24px;'></div>", unsafe_allow_html=True)

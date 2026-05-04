@@ -585,34 +585,75 @@ if "forum_posts" not in st.session_state:
     st.session_state.forum_posts = [
         {
             "id": 1,
+            "author": "HealingJourney22",
+            "category": "Skincare",
+            "timestamp": "15 mins ago",
+            "content": "Currently going through TSW and the flaking is unbelievable. Finding a moisturizer that doesn't burn is so hard right now. Does anyone have recommendations for gentle ointments rich in ceramides?"
+        },
+        {
+            "id": 2,
+            "author": "GutHealthGuru",
+            "category": "Recipes",
+            "timestamp": "1 hour ago",
+            "content": "Here is my go-to anti-inflammatory breakfast smoothie! 1/2 cup frozen blueberries, 1 handful fresh kale, 1 scoop hemp seeds, and 1/2 cup coconut yogurt packed with probiotics. It's very low histamine and helps cool down my skin from the inside out."
+        },
+        {
+            "id": 3,
             "author": "SkinHealer99",
             "category": "Skincare",
             "timestamp": "2 hours ago",
             "content": "Has anyone had success rebuilding their skin barrier using moisturizers heavy in ceramides? I recently stopped using topical steroids and my skin is extremely dry and flaking."
         },
         {
-            "id": 2,
-            "author": "DietDetective",
-            "category": "Food",
-            "timestamp": "5 hours ago",
-            "content": "I realized tomatoes are a massive trigger for me. Turns out they are incredibly high in histamine! Does anyone take probiotics to help process high histamine foods?"
+            "id": 4,
+            "author": "ChefSafe",
+            "category": "Recipes",
+            "timestamp": "3 hours ago",
+            "content": "Just made the most amazing low-histamine chicken broth! The trick is to pressure cook it for only 45 minutes instead of a slow simmer. It totally prevents the histamine buildup that usually causes my flare-ups."
         },
         {
-            "id": 3,
+            "id": 5,
+            "author": "DairyFreeDave",
+            "category": "Food",
+            "timestamp": "5 hours ago",
+            "content": "I cut out dairy completely a month ago and noticed a huge drop in my flare-ups. Has anyone else experienced this? I'm trying to figure out if it was a lactose intolerance or if it was triggering an immune response."
+        },
+        {
+            "id": 6,
+            "author": "ItchyMom",
+            "category": "Skincare",
+            "timestamp": "8 hours ago",
+            "content": "My dermatologist suggested we try wet wrap therapy for my son's severe flare tonight before considering a stronger dose of topical steroids. Fingers crossed he can finally get some comfortable sleep."
+        },
+        {
+            "id": 7,
+            "author": "AllergyClinic",
+            "category": "Workshops",
+            "timestamp": "1 day ago",
+            "content": "Reminder: We are hosting a free webinar this Friday on identifying hidden contact allergens. If you've hit a plateau in your healing, proper patch testing might be the key to figuring out what is holding you back!"
+        },
+        {
+            "id": 8,
             "author": "DocDerma",
             "category": "Workshops",
             "timestamp": "1 day ago",
             "content": "Join us tomorrow for a virtual workshop on advanced flare management. We will be demonstrating how to properly execute wet wrap therapy for severe overnight itching."
         },
         {
-            "id": 4,
+            "id": 9,
             "author": "PatchTester",
             "category": "Skincare",
             "timestamp": "2 days ago",
-            "content": "Just got my patch testing results back! Turns out I'm allergic to a specific preservative found in 90% of commercial shampoos. Read your labels closely!"
+            "content": "Just got my patch testing results back! Turns out I'm allergic to a specific preservative (Methylisothiazolinone) found in 90% of commercial shampoos. Read your labels closely!"
+        },
+        {
+            "id": 10,
+            "author": "DietDetective",
+            "category": "Food",
+            "timestamp": "3 days ago",
+            "content": "I realized tomatoes are a massive trigger for me. Turns out they are incredibly high in histamine! Does anyone take daily probiotics to help their gut process high histamine foods better?"
         }
     ]
-
 
 # --- LOAD DATA TO SESSION ---
 st.session_state.logs = load_data(DATA_FILE)
@@ -964,7 +1005,7 @@ with tab5:
     # iOS-style segmented control equivalent for category filtering
     category_filter = st.radio(
         "Filter by category",
-        ["All", "Food", "Skincare", "Workshops"],
+        ["All", "Food", "Recipes", "Skincare", "Workshops"], # Added Recipes
         horizontal=True,
         label_visibility="collapsed"
     )
@@ -974,7 +1015,8 @@ with tab5:
     # Simple form to add a new post
     with st.expander("✏️ Write a new post..."):
         with st.form("new_post_form", clear_on_submit=True):
-            new_cat = st.selectbox("Category", ["Food", "Skincare", "Workshops"])
+            # Added Recipes to the dropdown
+            new_cat = st.selectbox("Category", ["Food", "Recipes", "Skincare", "Workshops"])
             new_content = st.text_area("What's on your mind?", height=100)
             submit_post = st.form_submit_button("Post to Community")
             
@@ -999,11 +1041,13 @@ with tab5:
             
             # Set a theme color based on category
             if post["category"] == "Food":
-                cat_color = "#FF9500" # Orange
+                cat_color = "#FF9500" # iOS Orange
+            elif post["category"] == "Recipes":
+                cat_color = "#FF2D55" # iOS Pink (New!)
             elif post["category"] == "Skincare":
-                cat_color = "#AF52DE" # Purple
+                cat_color = "#AF52DE" # iOS Purple
             else:
-                cat_color = "#5856D6" # Indigo
+                cat_color = "#5856D6" # iOS Indigo
                 
             # Render the glassmorphic forum card
             st.markdown(f"""

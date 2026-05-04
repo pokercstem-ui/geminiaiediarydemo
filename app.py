@@ -66,13 +66,15 @@ st.markdown(
     }
 
     /* 4. Tab Button Formatting (Stacked Icons) - Now handles 5 tabs smoothly */
-    div[data-testid="stTabs"] [role="tablist"] > button {
-        flex: 1 !important;
-        justify-content: center !important;
-        padding: 0.6rem 0 !important;
+    div[data-testid="stTabs"] [role="tablist"] > button p {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 4px !important;
+        font-size: 0.80rem !important; 
+        font-weight: 600 !important;
         margin: 0 !important;
-        opacity: 0.45 !important; 
-        transition: opacity 0.2s, background-color 0.2s !important;
+        line-height: 1 !important;
     }
     
     div[data-testid="stTabs"] [role="tablist"] > button[aria-selected="true"] {
@@ -561,10 +563,12 @@ with tab1:
             """, unsafe_allow_html=True)
             with st.form("meal_form", clear_on_submit=True):
                 col_date1, col_time1 = st.columns(2)
+                with st.form("meal_form", clear_on_submit=True):
+                col_date1, col_time1 = st.columns(2)
                 with col_date1:
-                    meal_date = st.date_input("Meal date", value=datetime.now().date())
+                    meal_date = st.date_input("Meal date") 
                 with col_time1:
-                    meal_time = st.time_input("Meal time", value=datetime.now().time())
+                    meal_time = st.time_input("Meal time") 
                 meal_datetime = datetime.combine(meal_date, meal_time)
                 
                 meal_txt = st.text_input("What did you eat?", placeholder="e.g. French fries and spicy dipping sauce")
@@ -599,9 +603,11 @@ with tab1:
             with st.form("flare_form", clear_on_submit=True):
                 col_date2, col_time2 = st.columns(2)
                 with col_date2:
-                    flare_date = st.date_input("Flare date", value=datetime.now().date())
+                    # Removed the datetime.now() value override
+                    flare_date = st.date_input("Flare date")
                 with col_time2:
-                    flare_time = st.time_input("Flare time", value=datetime.now().time())
+                    # Removed the datetime.now() value override
+                    flare_time = st.time_input("Flare time")
                 flare_datetime = datetime.combine(flare_date, flare_time)
                 
                 sev = st.slider("Overall severity", 1, 10, 5)

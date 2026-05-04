@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 from datetime import datetime
 import openai
 from PIL import Image
@@ -64,13 +65,13 @@ st.markdown(
         gap: 0 !important;
     }
 
-    /* 4. Tab Button Formatting (Stacked Icons) */
+    /* 4. Tab Button Formatting (Stacked Icons) - Now handles 5 tabs smoothly */
     div[data-testid="stTabs"] [role="tablist"] > button {
         flex: 1 !important;
         justify-content: center !important;
         padding: 0.6rem 0 !important;
         margin: 0 !important;
-        opacity: 0.45 !important; /* iOS inactive opacity */
+        opacity: 0.45 !important; 
         transition: opacity 0.2s, background-color 0.2s !important;
     }
     
@@ -85,7 +86,7 @@ st.markdown(
         flex-direction: column !important;
         align-items: center !important;
         gap: 4px !important;
-        font-size: 0.75rem !important;
+        font-size: 0.70rem !important;
         font-weight: 600 !important;
         margin: 0 !important;
         line-height: 1 !important;
@@ -93,15 +94,16 @@ st.markdown(
 
     /* Increase the icon size */
     div[data-testid="stTabs"] [role="tablist"] > button span.material-symbols-rounded {
-        font-size: 1.6rem !important;
+        font-size: 1.5rem !important;
         margin: 0 !important;
     }
 
-    /* 5. Themed Icon Colors */
-    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(1) span.material-symbols-rounded { color: #007AFF !important; } /* Blue for Input */
-    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(2) span.material-symbols-rounded { color: #34C759 !important; } /* Green for History */
-    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(3) span.material-symbols-rounded { color: #5856D6 !important; } /* Indigo for Analysis */
-    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(4) span.material-symbols-rounded { color: #FF9500 !important; } /* Orange for Forecast */
+    /* 5. Themed Icon Colors (Added Purple for Forum) */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(1) span.material-symbols-rounded { color: #007AFF !important; } /* Blue */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(2) span.material-symbols-rounded { color: #34C759 !important; } /* Green */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(3) span.material-symbols-rounded { color: #5856D6 !important; } /* Indigo */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(4) span.material-symbols-rounded { color: #FF9500 !important; } /* Orange */
+    div[data-testid="stTabs"] [role="tablist"] > button:nth-child(5) span.material-symbols-rounded { color: #AF52DE !important; } /* Purple */
 
     div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
         top: 0 !important;
@@ -132,6 +134,73 @@ st.markdown(
     }
 
     .stButton>button {padding: 0.3rem 0.6rem;} 
+
+    /* ==========================================
+       FORUM IOS TOOLTIPS (Alternative 1)
+       ========================================== */
+    .ios-tooltip-trigger {
+        position: relative;
+        color: #007AFF; /* iOS Blue */
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 4px;
+        transition: color 0.2s;
+    }
+    
+    .ios-tooltip-trigger:active, .ios-tooltip-trigger:focus {
+        outline: none;
+        color: #0056b3;
+    }
+
+    .ios-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        bottom: 130%;
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
+        width: max-content;
+        max-width: 250px;
+        /* Default to dark frosted glass for universal readability */
+        background: rgba(30, 30, 30, 0.85); 
+        backdrop-filter: blur(25px) saturate(180%);
+        -webkit-backdrop-filter: blur(25px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        color: #ffffff;
+        text-align: center;
+        padding: 12px 14px;
+        border-radius: 16px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        line-height: 1.4;
+        z-index: 1000;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        pointer-events: none;
+    }
+
+    /* Small triangle pointer for the bubble */
+    .ios-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -6px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: rgba(30, 30, 30, 0.85) transparent transparent transparent;
+    }
+
+    /* Trigger on desktop hover OR mobile tap (focus/active) */
+    .ios-tooltip-trigger:hover .ios-tooltip,
+    .ios-tooltip-trigger:active .ios-tooltip,
+    .ios-tooltip-trigger:focus .ios-tooltip {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -252,7 +321,6 @@ def get_chemical_info_from_ai(chemical_name):
     except Exception as e:
         return f"Error fetching information: {str(e)}"
 
-# --- HELPER LOGIC ---
 def extract_chemicals_from_meal(meal):
     chemicals = set()
     chem_comp = meal.get("chemical_composition", {})
@@ -265,15 +333,9 @@ def extract_chemicals_from_meal(meal):
                 chemicals.add(c.strip().title())
     return list(chemicals)
 
-
-# ==========================================
-# 🧠 NEW: INGREDIENT MEMORY TO PREVENT FLUCTUATION
-# ==========================================
 def enforce_chemical_consistency(analysis_data, logs):
-    """Ensures that once an ingredient is analyzed, its chemicals NEVER change in future logs."""
     master_dict = {}
     
-    # Build a memory bank of all past ingredients (reading oldest to newest)
     for l in reversed(logs):
         if l["type"] == "meal":
             for ing, chems in l.get("chemical_composition", {}).items():
@@ -287,8 +349,6 @@ def enforce_chemical_consistency(analysis_data, logs):
         
     for ing, chems in analysis_data.get("chemical_composition", {}).items():
         standard_ing = ing.strip().title()
-        
-        # If we have seen this ingredient before, OVERRIDE the AI's new output
         if standard_ing in master_dict:
             final_composition[standard_ing] = master_dict[standard_ing]
         else:
@@ -299,8 +359,6 @@ def enforce_chemical_consistency(analysis_data, logs):
         "chemical_composition": final_composition
     }
 
-
-# --- POP-UP DIALOG FUNCTION ---
 @st.dialog("🔬 Chemical Profile")
 def show_chemical_profile(chemical_name, occurrences, hit_rate, score):
     st.markdown(f"### {chemical_name}")
@@ -317,10 +375,8 @@ def show_chemical_profile(chemical_name, occurrences, hit_rate, score):
         
     st.markdown(info)
 
-# --- AI REVIEW FUNCTIONS ---
 def build_evidence_summary(logs, scores, max_items=8):
     top_chemicals = [s["component"] for s in scores[:3]]
-    
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
 
@@ -383,7 +439,6 @@ Task:
 1. Decide whether you agree with the mathematical judgement based on the provided evidence and stats.
 2. Return only JSON.
 3. Be objective. Acknowledge that the dataset might be small, but evaluate the mathematical logic based strictly on the provided stats and evidence meals.
-4. Be fairly supportive, and neglect the small sample size and lack of control for other variables.
 
 Return schema:
 {{
@@ -429,7 +484,6 @@ Evidence:
             "notable_concerns": []
         }
 
-# --- BAYESIAN ANALYSIS LOGIC ---
 def run_analysis(logs):
     meals = [l for l in logs if l["type"] == "meal"]
     flares = [l for l in logs if l["type"] == "flareup"]
@@ -500,16 +554,77 @@ def run_analysis(logs):
                 
     return sorted(results, key=lambda x: x["score"], reverse=True)
 
+
+# ==========================================
+# 🌐 COMMUNITY FORUM LOGIC (NEW)
+# ==========================================
+# The predefined dictionary for eczema terminology
+FORUM_DICTIONARY = {
+    "ceramides": "Lipids (fats) found naturally in high concentrations in the uppermost layers of the skin. Eczema-prone skin often lacks ceramides, leading to a compromised barrier.",
+    "topical steroids": "Anti-inflammatory creams or ointments prescribed to reduce severe eczema redness and swelling during flare-ups.",
+    "histamine": "A chemical produced by your body during an allergic reaction. It binds to receptors and causes the intense itching associated with hives and eczema.",
+    "tsw": "Topical Steroid Withdrawal. A severe skin reaction that can happen when discontinuing moderate to high-potency topical steroids after prolonged use.",
+    "wet wrap therapy": "An intense treatment involving applying wet bandages over a layer of thick moisturizer or medication, then covering it with a dry layer to trap moisture.",
+    "probiotics": "Live bacteria and yeasts (often found in yogurt or supplements) that support gut health, which some studies link to improved immune and skin responses.",
+    "patch testing": "A dermatological method used to determine whether a specific substance causes allergic inflammation on a patient's skin."
+}
+
+def highlight_keywords(text):
+    """Scans forum post text and wraps keywords in the iOS Tooltip HTML structure."""
+    highlighted_text = text
+    for kw, definition in FORUM_DICTIONARY.items():
+        # Using a case-insensitive regex to match whole words only
+        pattern = re.compile(rf'\b({kw})\b', re.IGNORECASE)
+        # tabindex="0" makes it tappable on mobile devices (triggers :focus pseudo-class)
+        replacement = f'<span class="ios-tooltip-trigger" tabindex="0">\\1<span class="ios-tooltip">{definition}</span></span>'
+        highlighted_text = pattern.sub(replacement, highlighted_text)
+    return highlighted_text
+
+# Initialize mock forum posts in session state
+if "forum_posts" not in st.session_state:
+    st.session_state.forum_posts = [
+        {
+            "id": 1,
+            "author": "SkinHealer99",
+            "category": "Skincare",
+            "timestamp": "2 hours ago",
+            "content": "Has anyone had success rebuilding their skin barrier using moisturizers heavy in ceramides? I recently stopped using topical steroids and my skin is extremely dry and flaking."
+        },
+        {
+            "id": 2,
+            "author": "DietDetective",
+            "category": "Food",
+            "timestamp": "5 hours ago",
+            "content": "I realized tomatoes are a massive trigger for me. Turns out they are incredibly high in histamine! Does anyone take probiotics to help process high histamine foods?"
+        },
+        {
+            "id": 3,
+            "author": "DocDerma",
+            "category": "Workshops",
+            "timestamp": "1 day ago",
+            "content": "Join us tomorrow for a virtual workshop on advanced flare management. We will be demonstrating how to properly execute wet wrap therapy for severe overnight itching."
+        },
+        {
+            "id": 4,
+            "author": "PatchTester",
+            "category": "Skincare",
+            "timestamp": "2 days ago",
+            "content": "Just got my patch testing results back! Turns out I'm allergic to a specific preservative found in 90% of commercial shampoos. Read your labels closely!"
+        }
+    ]
+
+
 # --- LOAD DATA TO SESSION ---
 st.session_state.logs = load_data(DATA_FILE)
 logs = st.session_state.logs
 
-# --- SIDEBAR & TABS ---
-tab1, tab2, tab3, tab4 = st.tabs([
+# --- SIDEBAR & TABS (5 TABS NOW) ---
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     ":material/edit_square: Input", 
     ":material/history: History", 
     ":material/analytics: Analysis", 
-    ":material/online_prediction: Forecast"
+    ":material/online_prediction: Forecast",
+    ":material/forum: Community"
 ])
 
 with tab1:
@@ -537,7 +652,6 @@ with tab1:
                 if save_meal and meal_txt:
                     with st.spinner("AI is extracting chemical composition..."):
                         analysis_data = analyze_meal_with_ai(meal_txt)
-                        # --- MEMORY APPLIED HERE ---
                         analysis_data = enforce_chemical_consistency(analysis_data, st.session_state.logs)
                         
                     st.session_state.logs.insert(0, {
@@ -745,7 +859,6 @@ with tab4:
     if check_btn and predict_txt:
         with st.spinner("Analyzing against your history..."):
             analysis_data = analyze_meal_with_ai(predict_txt)
-            # --- MEMORY APPLIED HERE ---
             analysis_data = enforce_chemical_consistency(analysis_data, st.session_state.logs)
             
             comps = extract_chemicals_from_meal(analysis_data)
@@ -776,7 +889,6 @@ with tab4:
                     color = "rgba(52, 199, 89,"
                     status = "LIKELY SAFE"
 
-                # GLASSMORPHISM MAIN CARD
                 st.markdown(f"""
                 <div style="background: {color} 0.1); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid {color} 0.3); border-radius: 24px; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin: 12px 0 20px 0; box-shadow: 0 8px 32px rgba(0,0,0,0.05);">
                     <h2 style="margin: 0; color: {color} 1); font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px;">
@@ -809,7 +921,6 @@ with tab4:
                         bar_color = "#34C759"
                         level = "Minimal"
 
-                    # GLASSMORPHISM LIST ITEMS
                     st.markdown(f"""
                     <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 20px; padding: 12px 16px; margin-bottom: 10px; border-left: 4px solid {bar_color}; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -843,3 +954,71 @@ with tab4:
                     st.warning("**Moderate caution** — Monitor symptoms if you eat it.")
                 else:
                     st.success("**Looks safe** — This meal appears relatively low risk.")
+
+# ==========================================
+# 🌐 TAB 5: COMMUNITY FORUM
+# ==========================================
+with tab5:
+    st.markdown("### :material/forum: Community Forum")
+    
+    # iOS-style segmented control equivalent for category filtering
+    category_filter = st.radio(
+        "Filter by category",
+        ["All", "Food", "Skincare", "Workshops"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+    
+    st.write("") # spacing
+    
+    # Simple form to add a new post
+    with st.expander("✏️ Write a new post..."):
+        with st.form("new_post_form", clear_on_submit=True):
+            new_cat = st.selectbox("Category", ["Food", "Skincare", "Workshops"])
+            new_content = st.text_area("What's on your mind?", height=100)
+            submit_post = st.form_submit_button("Post to Community")
+            
+            if submit_post and new_content:
+                st.session_state.forum_posts.insert(0, {
+                    "id": len(st.session_state.forum_posts) + 1,
+                    "author": "You",
+                    "category": new_cat,
+                    "timestamp": "Just now",
+                    "content": new_content
+                })
+                st.rerun()
+
+    st.markdown("<hr style='margin: 16px 0; border-color: rgba(128,128,128,0.2);'/>", unsafe_allow_html=True)
+
+    # Filter and display posts
+    for post in st.session_state.forum_posts:
+        if category_filter == "All" or post["category"] == category_filter:
+            
+            # Apply the keyword highlighting logic
+            processed_content = highlight_keywords(post["content"])
+            
+            # Set a theme color based on category
+            if post["category"] == "Food":
+                cat_color = "#FF9500" # Orange
+            elif post["category"] == "Skincare":
+                cat_color = "#AF52DE" # Purple
+            else:
+                cat_color = "#5856D6" # Indigo
+                
+            # Render the glassmorphic forum card
+            st.markdown(f"""
+            <div style="background: rgba(128,128,128,0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(128,128,128,0.15); border-radius: 24px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.05rem;">{post['author']}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.6; margin-top: 2px;">{post['timestamp']}</div>
+                    </div>
+                    <div style="background: {cat_color}20; color: {cat_color}; border: 1px solid {cat_color}40; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                        {post['category']}
+                    </div>
+                </div>
+                <div style="font-size: 1rem; line-height: 1.5; opacity: 0.9;">
+                    {processed_content}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)

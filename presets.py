@@ -427,8 +427,8 @@ def get_preset_logs():
     # ==========================================
     # Generate 3 weeks (most recent first)
     # ==========================================
-    generate_standard_week(0)   # Week 1 - Most recent
-    generate_vitamin_e_week(7)  # Week 2 - Heavy Vitamin E protection
-    generate_standard_week(14)  # Week 3 - Older baseline
+    generate_standard_week(1)   # Week 1 - Most recent
+    generate_vitamin_e_week(8)  # Week 2 - Heavy Vitamin E protection
+    generate_standard_week(15)  # Week 3 - Older baseline
 
     return sorted(logs, key=lambda x: x["timestamp"], reverse=True)
